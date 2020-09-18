@@ -1,0 +1,6 @@
+[submodule "mini_proj/src/glfw"]
+	path = mini_proj/src/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "mini_proj/src/glm"]
+	path = mini_proj/src/glm
+	url = https://github.com/g-truc/glm.git
