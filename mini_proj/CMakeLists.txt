@@ -9,5 +9,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories(SYSTEM src/glad/include)
 include_directories(SYSTEM src/glfw/include)
+include_directories(SYSTEM src/glm/glm)
     
 add_subdirectory(src)
