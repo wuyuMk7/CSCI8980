@@ -2,9 +2,9 @@
 
 void Rectangle::init()
 {
-    glm::vec3 ori(0.0f), trans = this->_tl - ori;
-    glm::vec3 b_tl = ori, b_tr = this->_tr - trans,
-              b_bl = this->_bl - trans, b_br = this->_br - trans;
+    glm::vec3 ori(0.0f), trans = this->_bl - ori;
+    glm::vec3 b_tl = this->_tl - trans, b_tr = this->_tr - trans,
+              b_bl = ori, b_br = this->_br - trans;
 
     float base_verts[] = {
         b_tl.x, b_tl.y,
@@ -15,6 +15,15 @@ void Rectangle::init()
         b_bl.x, b_bl.y,
         b_br.x, b_br.y 
     };
+    // float base_verts[] = {
+    //     0.0f, 400.0f,
+    //     200.0f, 0.0f,
+    //     400.0f, 400.0f,
+
+    //     0.0f, 400.0f,
+    //     200.0f, 0.0f,
+    //     400.0f, 400.0f
+    // };
 
     // std::cout << glm::to_string(b_tl) << std::endl
     //           << glm::to_string(b_tr) << std::endl
@@ -41,12 +50,13 @@ void Rectangle::draw()
 
     // Calculate model matrix
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, this->_tl);
+    model = glm::translate(model, this->_bl);
 
-    glm::vec3 center = (this->_br - this->_tl) * 0.5f;
-    model = glm::translate(model, center);
-    model = glm::rotate(model, glm::radians(this->_rotate), glm::vec3(0.0f, 0.0f, 1.0f));
-    model = glm::translate(model, -center);
+    // glm::vec3 center = (this->_bl + this->_tr) * 0.5f;
+    // model = glm::translate(model, center);
+    // model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    // model = glm::translate(model, -center);
+    // model = glm::translate(model, this->_bl);
 
     glUniformMatrix4fv(
         glGetUniformLocation(this->_shader.id(), "model"),

@@ -4,7 +4,7 @@ add_subdirectory(glad)
 add_subdirectory(glfw)
 add_subdirectory(glm)
 
-add_executable(main main.cc shader.cc rectangle.cc car.cc)
+add_executable(main main.cc shader.cc rectangle.cc car.cc) 
 target_link_libraries(main PUBLIC glad glfw)
 
 set_target_properties(
