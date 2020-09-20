@@ -17,7 +17,7 @@ public:
         _shader(shader), _rec(rec), _vel(vel) { this->init(); };
 
     void init();
-    void update();
+    void update(float dt);
     void draw();
     void move(const glm::vec3 &to);
 
@@ -25,7 +25,7 @@ public:
     
     void accelerate(float scale = 1.0f);
     void decelerate(float scale = 1.0f);
-    void moveForward();
+    void moveForward(float dt);
     void turnLeft();
     void turnRight();
 

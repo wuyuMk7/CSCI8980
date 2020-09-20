@@ -13,9 +13,9 @@ void Car::init()
     this->_rec_sub = Rectangle(this->_shader, sub_tl, sub_tr, sub_bl, sub_br);
 }
 
-void Car::update()
+void Car::update(float dt)
 {
-    this->moveForward();
+    this->moveForward(dt);
 }
 
 void Car::draw()
@@ -39,18 +39,20 @@ void Car::color(const glm::vec3& new_color)
 
 void Car::accelerate(float scale)
 {
-    this->_vel = std::min(this->_vel + scale * 0.1f, 1.5f);
+    this->_vel = std::min(this->_vel + scale * 2.0f, 60.0f);
+    // std::cout << "a: " << _vel << std::endl;
 }
 
 void Car::decelerate(float scale)
 {
-    this->_vel = std::max(this->_vel - scale * 0.1f, -1.5f);
+    this->_vel = std::max(this->_vel - scale * 2.0f, -30.0f);
+    // std::cout << "d: " << _vel << std::endl;
 }
 
-void Car::moveForward()
+void Car::moveForward(float dt)
 {
     glm::vec3 dir_n = glm::normalize(this->_rec.tr() - this->_rec.tl());
-    this->move(_vel * dir_n);
+    this->move(_vel * dt * dir_n);
 }
 
 void Car::turnLeft()

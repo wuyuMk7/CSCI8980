@@ -56,7 +56,8 @@ int main(int argc, char* argv[])
 
         processInput(window);
 
-        car.update();
+        // Or use framerate to calcuate dt
+        car.update(0.01f);
         car.draw();
         car.processInput(window);
 
