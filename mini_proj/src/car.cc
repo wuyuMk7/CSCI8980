@@ -16,6 +16,7 @@ void Car::init()
 
 void Car::update(float dt)
 {
+    this->_theta += this->_omega * dt;
     this->moveForward(dt);
 }
 
@@ -44,7 +45,7 @@ void Car::move(const glm::vec3& to)
 {
     this->_rec.rotateTo(this->_theta);
     this->_rec.move(to);
-    this->recalcSubRecPos();
+    //this->recalcSubRecPos();
     this->_rec_sub.rotateTo(this->_theta);
     this->_rec_sub.move(to);
 }
@@ -71,8 +72,10 @@ void Car::decelerate(float scale)
 void Car::moveForward(float dt)
 {
     // update the rotation of the car here?
-    this->_theta += dt * this->_omega;
+    // this->_theta += dt * this->_omega;
     glm::vec3 dir_n = glm::normalize(this->_rec.tr() - this->_rec.tl());
+    dir_n = glm::rotate(dir_n, glm::radians(this->_theta), glm::vec3(0.0f, 0.0f, 1.0f));
+    //std::cout << this->_theta << std::endl;
     this->move(_vel * dt * dir_n);
 }
 

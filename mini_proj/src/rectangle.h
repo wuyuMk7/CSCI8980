@@ -7,6 +7,7 @@
 #include "gtc/matrix_transform.hpp"
 #include "gtc/type_ptr.hpp"
 #include "gtx/string_cast.hpp"
+#include "gtx/rotate_vector.hpp"
 
 #include <iostream>
 
@@ -60,6 +61,8 @@ private:
     float _rotate = 0.0f;
     // Scale
     float _scale = 1.0f;
+    // Central point
+    glm::vec3 _center;
 };
 
 #endif
