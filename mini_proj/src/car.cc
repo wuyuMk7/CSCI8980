@@ -12,11 +12,16 @@ void Car::init()
               sub_tr = sub_tl + sub_b_len * b_diff_n, 
               sub_br = sub_bl + sub_b_len * b_diff_n;
     this->_rec_sub = Rectangle(this->_shader, sub_tl, sub_tr, sub_bl, sub_br);
+    glm::vec3 rec_sub_cen = this->_rec_sub.bl() + this->_rec_sub.initialCenter(),
+              rec_cen = this->_rec.bl() + this->_rec.initialCenter();
+    this->_main_sub_center_vec = rec_sub_cen - rec_cen;
 }
 
 void Car::update(float dt)
 {
-    this->_theta += this->_omega * dt;
+    float angle_diff = this->_omega * dt;
+    this->_theta += angle_diff;
+    this->_main_sub_center_vec = glm::rotateZ(this->_main_sub_center_vec, glm::radians(angle_diff));
     this->moveForward(dt);
 }
 
@@ -43,9 +48,18 @@ void Car::recalcSubRecPos()
 
 void Car::move(const glm::vec3& to)
 {
+    glm::vec3 cur_main_cen = (this->_rec.bl() + this->_rec.tr()) * 0.5f,
+              cur_sub_cen = (this->_rec_sub.bl() + this->_rec_sub.tr()) * 0.5f,
+              cur_main_sub_cen_vec = cur_sub_cen - cur_main_cen;
+
     this->_rec.rotateTo(this->_theta);
     this->_rec.move(to);
+
     //this->recalcSubRecPos();
+    // std::cout << glm::to_string(this->_main_sub_center_vec) << std::endl;
+    // std::cout << glm::to_string(cur_main_sub_cen_vec) << std::endl; 
+    // std::cout << glm::to_string(this->_main_sub_center_vec - cur_main_sub_cen_vec) << std::endl << std::endl;
+    this->_rec_sub.move(this->_main_sub_center_vec - cur_main_sub_cen_vec);
     this->_rec_sub.rotateTo(this->_theta);
     this->_rec_sub.move(to);
 }

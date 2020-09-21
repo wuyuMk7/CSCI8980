@@ -38,6 +38,7 @@ private:
     float _theta = 0.0f;
     float _omega = 0.0f;
     glm::vec3 _color = glm::vec3(0.0f);
+    glm::vec3 _main_sub_center_vec = glm::vec3(0.0f);
 };
 
 #endif

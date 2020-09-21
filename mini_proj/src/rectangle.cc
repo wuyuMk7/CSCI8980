@@ -6,7 +6,7 @@ void Rectangle::init()
     glm::vec3 b_tl = this->_tl - trans, b_tr = this->_tr - trans,
               b_bl = ori, b_br = this->_br - trans;
 
-    _center = (b_bl + b_tr) * 0.5f;
+    _initial_center = (b_bl + b_tr) * 0.5f;
 
     float base_verts[] = {
         b_tl.x, b_tl.y,
@@ -54,11 +54,11 @@ void Rectangle::draw()
     glm::mat4 model = glm::mat4(1.0f);
 
     glm::vec3 cur_center = (this->_bl + this->_tr) * 0.5f;
-    model = glm::translate(model, cur_center - _center);
+    model = glm::translate(model, cur_center - _initial_center);
 
-    model = glm::translate(model, _center);
+    model = glm::translate(model, _initial_center);
     model = glm::rotate(model, glm::radians(this->_rotate), glm::vec3(0.0f, 0.0f, 1.0f));
-    model = glm::translate(model, -_center);
+    model = glm::translate(model, -_initial_center);
     // this->_bl = glm::vec3(model * glm::vec4(this->_bl.x, this->_bl.y, this->_bl.z, 1.0f));
     // this->_tl = glm::vec3(model * glm::vec4(this->_tl.x, this->_tl.y, this->_tl.z, 1.0f));
     // this->_br = glm::vec3(model * glm::vec4(this->_br.x, this->_br.y, this->_br.z, 1.0f));

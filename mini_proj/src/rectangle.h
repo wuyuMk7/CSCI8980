@@ -40,6 +40,7 @@ public:
     const glm::vec3& tr() const { return this->_tr; };
     const glm::vec3& bl() const { return this->_bl; };
     const glm::vec3& br() const { return this->_br; };
+    const glm::vec3& initialCenter() const { return this->_initial_center; };
     // Setters
     void tl(const glm::vec3 new_tl) { _tl = new_tl; };
     void tr(const glm::vec3 new_tr) { _tr = new_tr; };
@@ -62,7 +63,7 @@ private:
     // Scale
     float _scale = 1.0f;
     // Central point
-    glm::vec3 _center;
+    glm::vec3 _initial_center;
 };
 
 #endif
