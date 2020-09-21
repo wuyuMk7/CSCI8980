@@ -19,6 +19,7 @@ public:
     void init();
     void update(float dt);
     void draw();
+    void recalcSubRecPos();
     void move(const glm::vec3 &to);
 
     void color(const glm::vec3 &new_color);
@@ -26,14 +27,16 @@ public:
     void accelerate(float scale = 1.0f);
     void decelerate(float scale = 1.0f);
     void moveForward(float dt);
-    void turnLeft();
-    void turnRight();
+    void turnLeft(float scale = 1.0f);
+    void turnRight(float scale = 1.0f);
 
     void processInput(GLFWwindow *window);
 private:
     Shader _shader;
     Rectangle& _rec, _rec_sub;
     float _vel = 1.0f;
+    float _theta = 0.0f;
+    float _omega = 0.0f;
     glm::vec3 _color = glm::vec3(0.0f);
 };
 

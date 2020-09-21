@@ -50,13 +50,17 @@ void Rectangle::draw()
 
     // Calculate model matrix
     glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, this->_bl);
-
-    // glm::vec3 center = (this->_bl + this->_tr) * 0.5f;
-    // model = glm::translate(model, center);
-    // model = glm::rotate(model, glm::radians(45.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    // model = glm::translate(model, -center);
     // model = glm::translate(model, this->_bl);
+
+    glm::vec3 center = (this->_bl + this->_tr) * 0.5f;
+    model = glm::translate(model, center);
+    model = glm::rotate(model, glm::radians(this->_rotate), glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::translate(model, -center);
+    // this->_bl = glm::vec3(model * glm::vec4(this->_bl.x, this->_bl.y, this->_bl.z, 1.0f));
+    // this->_tl = glm::vec3(model * glm::vec4(this->_tl.x, this->_tl.y, this->_tl.z, 1.0f));
+    // this->_br = glm::vec3(model * glm::vec4(this->_br.x, this->_br.y, this->_br.z, 1.0f));
+    // this->_tr = glm::vec3(model * glm::vec4(this->_tr.x, this->_tr.y, this->_tr.z, 1.0f));
+    model = glm::translate(model, this->_bl);
 
     glUniformMatrix4fv(
         glGetUniformLocation(this->_shader.id(), "model"),
