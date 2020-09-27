@@ -64,10 +64,10 @@ xt::xarray<double> cem::doule_layer_model(xt::xarray<double> params, xt::xarray<
     // layer1 input->hidden
     int m1_end = hidden_size * in_size;
     // matrix1 = np.reshape(params[0:m1_end], (hidden_size,in_size))
-    xt::xarray<double> shit = xt::view(params, xt::range(_, m1_end), 1);
-    xt::xarray<double> matrix1 = shit.reshape({hidden_size, in_size});
-    xt::xarray<double> shit2 = xt::view(params, xt::range(m1_end, m1_end + hidden_size), 1);
-    xt::xarray<double> biases1 = shit2.reshape({hidden_size, 1});
+    xt::xarray<double> view1 = xt::view(params, xt::range(_, m1_end), 1);
+    xt::xarray<double> matrix1 = view1.reshape({hidden_size, in_size});
+    xt::xarray<double> view2 = xt::view(params, xt::range(m1_end, m1_end + hidden_size), 1);
+    xt::xarray<double> biases1 = view2.reshape({hidden_size, 1});
     xt::xarray<double> hidden_out = (matrix1 * in_vec) + biases1;
     hidden_out = hidden_out  * (hidden_out > 0) + 0.1 * hidden_out * (hidden_out < 0); //Leaky ReLU
 }
