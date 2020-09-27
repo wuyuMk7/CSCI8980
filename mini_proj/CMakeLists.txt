@@ -11,5 +11,8 @@ set(CMAKE_BUILD_TYPE Debug)
 include_directories(SYSTEM src/glad/include)
 include_directories(SYSTEM src/glfw/include)
 include_directories(SYSTEM src/glm/glm)
+include_directories(SYSTEM src/xtl/include)
+include_directories(SYSTEM src/xsimd/include)
+include_directories(SYSTEM src/xtensor/include)
     
 add_subdirectory(src)

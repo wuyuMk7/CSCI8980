@@ -4,3 +4,12 @@
 [submodule "mini_proj/src/glm"]
 	path = mini_proj/src/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "mini_proj/src/xtensor"]
+	path = mini_proj/src/xtensor
+	url = git@github.com:xtensor-stack/xtensor.git
+[submodule "mini_proj/src/xsimd"]
+	path = mini_proj/src/xsimd
+	url = git@github.com:xtensor-stack/xsimd.git
+[submodule "mini_proj/src/xtl"]
+	path = mini_proj/src/xtl
+	url = git@github.com:xtensor-stack/xtl.git

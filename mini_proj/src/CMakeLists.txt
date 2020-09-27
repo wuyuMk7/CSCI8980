@@ -4,8 +4,15 @@ add_subdirectory(glad)
 add_subdirectory(glfw)
 add_subdirectory(glm)
 
-add_executable(main main.cc shader.cc rectangle.cc car.cc) 
-target_link_libraries(main PUBLIC glad glfw)
+add_subdirectory(xtl)
+add_subdirectory(xsimd)
+add_subdirectory(xtensor)
+
+add_compile_options(-O3 -mavx2 -ffast-math)
+
+
+add_executable(main main.cc shader.cc rectangle.cc car.cc cem.cc) 
+target_link_libraries(main PUBLIC glad glfw xtensor)
 
 set_target_properties(
     main 
