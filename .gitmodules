@@ -13,3 +13,6 @@
 [submodule "mini_proj/src/xtl"]
 	path = mini_proj/src/xtl
 	url = git@github.com:xtensor-stack/xtl.git
+[submodule "mini_proj/src/xtensor-blas"]
+	path = mini_proj/src/xtensor-blas
+	url = https://github.com/xtensor-stack/xtensor-blas.git
