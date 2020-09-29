@@ -67,9 +67,6 @@ int main(int argc, char* argv[])
     }
 
     // Load model or Train model
-    car.loadModel(model_filename);
-    car.setFLTime(8.0f, 0.01f);
-
     if (!std::filesystem::exists(model_filename) || flag_retrain) {
       car.setGoal(glm::vec3(400.0f, 200.0f, 0.0f));
       car.trainRL(8.0f, 0.01f);
@@ -81,9 +78,12 @@ int main(int argc, char* argv[])
       if (flag_save_model) {
         car.saveModel(model_filename);
       }
+    } else {
+      car.loadModel(model_filename);
+      car.setFLTime(8.0f, 0.01f);
     }
 
-    car.setGoal(glm::vec3(500.0f, 300.0f, 0.0f));
+    car.setGoal(pt_goal);
     car.runRL();
     car.printActions();
     car.printStates();

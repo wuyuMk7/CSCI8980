@@ -144,12 +144,12 @@ void Car::runRL()
 
   double c_x = _rec.tl().x, c_y = _rec.tl().y, c_theta = _theta;
   std::vector<std::vector<double>> state_list, action_list;
-  state_list.emplace_back(std::vector<double> {c_x, c_y, c_theta, _goal.x, _goal.y});
+  state_list.emplace_back(std::vector<double> { c_x, c_y, c_theta, _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() });
 
   int times = (int)dou_times;
   for (size_t i = 0;i < times; ++i) {
-    xt::xarray<double> cur_state{ c_x, c_y, c_theta,  _goal.x, _goal.y }, next_state;
-    xt::xarray<double> action = this->_rl.run(cur_state);
+    xt::xarray<double> cur_state{ c_x, c_y, c_theta,  _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() };
+    xt::xarray<double> next_state, action = this->_rl.run(cur_state);
 
     // Clamp
     double new_vel = action[0], new_omega = action[1], new_vel_x, new_vel_y;
@@ -166,7 +166,7 @@ void Car::runRL()
     c_y += new_vel_y * _rl_dt;
     c_theta += new_omega * _rl_dt;
 
-    state_list.emplace_back(std::vector<double>{ c_x, c_y, c_theta, _goal.x, _goal.y });
+    state_list.emplace_back(std::vector<double>{ c_x, c_y, c_theta, _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() });
     action_list.emplace_back(std::vector<double>{ action[0], action[1] });
   }
 

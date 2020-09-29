@@ -50,7 +50,7 @@ public:
   void load(const std::string &infile);
   bool check(const std::string &infile);
 
-  unsigned int in_size = 5;
+  unsigned int in_size = 8;
   unsigned int out_size = 2;
 
   unsigned int hidden_size = 10;
