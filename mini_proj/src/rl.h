@@ -31,10 +31,7 @@ xt::xarray<double> doubleLayerModel(unsigned int in_size, unsigned int hidden_si
 class RL 
 {
 public:
-  RL(RLRunnable *obj): _obj(obj) {
-    policy_size = (in_size + 1) * hidden_size + (hidden_size + 1) * out_size;
-    this->params = xt::zeros<double>({ policy_size });
-  };
+  RL(RLRunnable *obj): _obj(obj) {};
   ~RL() {};
 
   void cem();
@@ -50,16 +47,23 @@ public:
   void load(const std::string &infile);
   bool check(const std::string &infile);
 
+  void initModel();
+  void switchModel2();
+  void switchModel3();
+
   unsigned int in_size = 8;
   unsigned int out_size = 2;
 
-  unsigned int hidden_size = 10;
+  unsigned int model_version = 2;
+  unsigned int hidden_size = 100;
+  unsigned int hidden_size1 = 10;
+  unsigned int hidden_size2 = 20;
   unsigned int evaluation_samples = 10;
 
   unsigned int policy_size = 0;
 
   unsigned int cem_iterations = 100;
-  unsigned int cem_batch_size = 50;
+  unsigned int cem_batch_size = 100;
   unsigned int cem_print_rate = 5;
 
   double cem_elite_frac = 0.25;

@@ -49,6 +49,43 @@ doubleLayerModel(
   return l2_out;
 }
 
+xt::xarray<double>
+tripleLayerModel(
+    unsigned int in_size,
+    unsigned int hidden_size1,
+    unsigned int hidden_size2,
+    unsigned int out_size,
+    xt::xarray<double> &in,
+    xt::xarray<double> &total_weights
+) {
+  unsigned int l1_end = hidden_size1 * in_size,
+    l2_start = l1_end + hidden_size1, l2_end = l2_start + hidden_size2 * hidden_size1,
+    l3_start = l2_end + hidden_size2, l3_end = l3_start + out_size * hidden_size2;
+
+  // First layer
+  xt::xarray<double> l1_weights_view = xt::view(total_weights, xt::range(_, l1_end), xt::all()),
+    l1_weights = l1_weights_view.reshape({ hidden_size1, in_size }),
+    l1_biases_view = xt::view(total_weights, xt::range(l1_end, l2_start), xt::all()),
+    l1_biases = l1_biases_view.reshape({ hidden_size1, 1 });
+  xt::xarray<double> l1_out = reluLayer(in, l1_weights, l1_biases);
+
+  // Second layer
+  xt::xarray<double> l2_weights_view = xt::view(total_weights, xt::range(l2_start, l2_end), xt::all()),
+    l2_weights = l2_weights_view.reshape({ hidden_size2, hidden_size1 }),
+    l2_biases_view = xt::view(total_weights, xt::range(l2_end, l2_end + hidden_size2), xt::all()),
+    l2_biases = l2_biases_view.reshape({ hidden_size2, 1 });
+  xt::xarray<double> l2_out = reluLayer(l1_out, l2_weights, l2_biases);
+
+  // Third layer
+  xt::xarray<double> l3_weights_view = xt::view(total_weights, xt::range(l3_start, l3_end), xt::all()),
+    l3_weights = l3_weights_view.reshape({ out_size, hidden_size2 }),
+    l3_biases_view = xt::view(total_weights, xt::range(l3_end, l3_end + out_size), xt::all()),
+    l3_biases = l3_biases_view.reshape({ out_size, 1 });
+  xt::xarray<double> l3_out = xt::linalg::dot(l3_weights, l2_out) + l3_biases;
+
+  return l3_out;
+}
+
 void RL::cem()
 {
   double dou_n_elite;
@@ -98,16 +135,39 @@ double RL::reward()
 
 xt::xarray<double> RL::run(xt::xarray<double> &in_data)
 {
-  xt::xarray<double> out = doubleLayerModel(in_size, hidden_size, out_size, in_data, params);
-  return out;
+  if (model_version == 2) {
+    xt::xarray<double> out = doubleLayerModel(in_size, hidden_size, out_size, in_data, params);
+    return out;
+  } else {
+    xt::xarray<double> out = tripleLayerModel(in_size, hidden_size1, hidden_size2, out_size, in_data, params);
+    return out;
+  }
 }
 
 void RL::train()
 {
-  policy_size = (in_size + 1) * hidden_size + (hidden_size + 1) * out_size;
-  this->params = xt::zeros<double>({ policy_size });
-
+  this->initModel();
   this->cem();
+}
+
+void RL::initModel()
+{
+  if (model_version == 2) {
+    policy_size = (in_size + 1) * hidden_size + (hidden_size + 1) * out_size;
+  } else {
+    policy_size = (in_size + 1) * hidden_size1 + (hidden_size1 + 1) * hidden_size2 +  (hidden_size2 + 1) * out_size;    
+  }
+  this->params = xt::zeros<double>({ policy_size });
+}
+
+void RL::switchModel2()
+{
+  model_version = 2;
+}
+
+void RL::switchModel3()
+{
+  model_version = 3;
 }
 
 bool RL::check(const std::string &infile)
@@ -123,6 +183,7 @@ void RL::load(const std::string &infile)
   if (check(infile)) {
     std::ifstream ifs(infile);
     auto data = xt::load_csv<double>(ifs);
+    this->initModel();
     data.reshape(this->params.shape());
     this->params = data;
   }

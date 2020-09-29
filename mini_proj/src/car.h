@@ -72,6 +72,8 @@ private:
     float _omega = 0.0f;
     glm::vec3 _color = glm::vec3(0.0f);
     glm::vec3 _main_sub_center_vec = glm::vec3(0.0f);
+    glm::vec3 _initial_car_center = glm::vec3(0.0f);
+    glm::vec3 _initial_car_bl, _initial_car_br, _initial_car_tl, _initial_car_tr;
 
     glm::vec3 _goal = glm::vec3(0.0f);
 

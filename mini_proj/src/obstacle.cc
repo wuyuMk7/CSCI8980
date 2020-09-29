@@ -12,9 +12,9 @@ void Obstacle::init()
     base_verts[i * 6 + 4] = _center.x + _radius * glm::cos(glm::radians((float)i+1.0f));
     base_verts[i * 6 + 5] = _center.y + _radius * glm::sin(glm::radians((float)i+1.0f));
     //std::cout << (float)i << " " << (float)i+1.0f << " " << glm::sin(glm::radians((float)i+1.0f)) << std::endl;
-    std::cout << base_verts[i * 6] << " " << base_verts[i * 6 + 1] << std::endl;
-    std::cout << base_verts[i * 6+2] << " " << base_verts[i * 6 + 3] << std::endl;
-    std::cout << base_verts[i * 6+4] << " " << base_verts[i * 6 + 5] << std::endl;
+    //std::cout << base_verts[i * 6] << " " << base_verts[i * 6 + 1] << std::endl;
+    //std::cout << base_verts[i * 6+2] << " " << base_verts[i * 6 + 3] << std::endl;
+    //std::cout << base_verts[i * 6+4] << " " << base_verts[i * 6 + 5] << std::endl;
   }
 
   glGenVertexArrays(1, &this->_vao);

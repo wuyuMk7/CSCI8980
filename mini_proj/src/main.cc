@@ -84,6 +84,7 @@ int main(int argc, char* argv[])
     }
 
     car.setGoal(pt_goal);
+    //car.setGoal(glm::vec3(400.0f, 200.0f, 0.0f));
     car.runRL();
     car.printActions();
     car.printStates();

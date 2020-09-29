@@ -15,6 +15,15 @@ void Car::init()
     glm::vec3 rec_sub_cen = this->_rec_sub.bl() + this->_rec_sub.initialCenter(),
               rec_cen = this->_rec.bl() + this->_rec.initialCenter();
     this->_main_sub_center_vec = rec_sub_cen - rec_cen;
+
+    glm::vec3 car_tr = glm::vec3(sub_tr.x, tr.y, 0.0f), car_bl = this->_rec.bl();
+    this->_initial_car_bl = glm::vec3(0.0f);
+    this->_initial_car_tl = this->_rec.tl() - this->_rec.bl();
+    this->_initial_car_tr = glm::vec3(sub_tr.x, tr.y, 0.0f) - this->_rec.bl();
+    this->_initial_car_br = glm::vec3(sub_tr.x, br.y, 0.0f) - this->_rec.bl();
+    this->_initial_car_center = this->_initial_car_tr * 0.5f;
+
+    this->_rl.switchModel3();
 }
 
 void Car::update(float dt)
@@ -37,7 +46,8 @@ void Car::draw(size_t cur_state_index)
     auto cur_state = _rl_state_vec[cur_state_index];
     double new_theta = cur_state[2] / M_PI * 180, angle_diff = new_theta - this->_theta;
     this->_main_sub_center_vec = glm::rotateZ(this->_main_sub_center_vec, (float)glm::radians(angle_diff));
-    this->forceToMoveTo(glm::vec3(cur_state[0], cur_state[1], 0.0f));
+    //this->forceToMoveTo(glm::vec3(cur_state[0], cur_state[1], 0.0f));
+    this->forceToMoveTo(glm::vec3(cur_state[0], cur_state[1], 0.0f) + _initial_car_tl - _initial_car_center);
     this->forceToRotateTo(new_theta);
     this->draw();
   }
@@ -142,13 +152,15 @@ void Car::runRL()
   double dou_times;
   modf(_rl_sim_time / _rl_dt, &dou_times);
 
-  double c_x = _rec.tl().x, c_y = _rec.tl().y, c_theta = _theta;
+  //double c_x = _rec.tl().x, c_y = _rec.tl().y, c_theta = _theta;
+  glm::vec3 cur_car_center = this->_initial_car_center + _rec.bl();
+  double c_x = cur_car_center.x, c_y = cur_car_center.y, c_theta = _theta;
   std::vector<std::vector<double>> state_list, action_list;
   state_list.emplace_back(std::vector<double> { c_x, c_y, c_theta, _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() });
 
   int times = (int)dou_times;
   for (size_t i = 0;i < times; ++i) {
-    xt::xarray<double> cur_state{ c_x, c_y, c_theta,  _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() };
+    xt::xarray<double> cur_state{ c_x, c_y, c_theta, _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() };
     xt::xarray<double> next_state, action = this->_rl.run(cur_state);
 
     // Clamp
@@ -188,13 +200,14 @@ double Car::scoreRL()
     double dx = this->_goal.x - cur_state[0], dy = this->_goal.y - cur_state[1];
     dist = sqrt(dx * dx + dy * dy);
 
-    task_reward -= dist;
+    task_reward -= dist * 5;
     //task_reward -= 1.5 * abs(cur_action[0]);
     if (dist < 35) task_reward -= 2.5 * abs(cur_action[0]);
     else if (dist < 60) task_reward -= 1.8 * abs(cur_action[0]);
     else if (dist < 100) task_reward -= 1.5 * abs(cur_action[0]);
-    else if (dist < 300) task_reward -= 1.2 * abs(cur_action[0]);
+    //else if (dist < 300) task_reward -= 1.2 * abs(cur_action[0]);
     else task_reward -= 0.8 * abs(cur_action[0]);
+    //task_reward -= 1.0 * abs(cur_action[0]);
 
     //task_reward -= 1.5 * abs(cur_action[1]);
 
@@ -203,10 +216,15 @@ double Car::scoreRL()
     double dot_ns = glm::dot(tar_n, cur_n);
     if (dot_ns > 0.9) task_reward -= 2.0 * abs(cur_action[1]);
     else task_reward -= 1.2 * abs(cur_action[1]);
+    //task_reward -= 1.2 * abs(cur_action[1]);
 
     // Check borders
+    //double c_tl_x = cur_state[0], c_tl_y = cur_state[0],
+    //c_dx = c_tl_x - _rec.tl().x, c_dy = c_tl_y - _rec.tl().y;
+
+    /*
     double c_tl_x = cur_state[0], c_tl_y = cur_state[0],
-      c_dx = c_tl_x - _rec.tl().x, c_dy = c_tl_y - _rec.tl().y;
+      c_dx = c_tl_x - _initial_car_center.x, c_dy = c_tl_y - _initial_car_center.y;
     double max_x = 800, max_y = 600;
     if (c_tl_x < 0 || c_tl_y < 0 || c_tl_x > max_x || c_tl_y > max_y ||
         _rec.tr().x + c_dx < 0 || _rec.tr().x + c_dx > max_x ||
@@ -216,9 +234,8 @@ double Car::scoreRL()
         _rec.bl().x + c_dx < 0 || _rec.bl().x + c_dx > max_x ||
         _rec.bl().y + c_dy < 0 || _rec.bl().y + c_dy > max_y)
       task_reward -= 500;
+    */
 
-    //if (cur_state[0] < 0 || cur_state[1] < 0 || cur_state[0] > 800 || cur_state[0] > 600)
-    //task_reward -= 5000;
   }
 
   // task_reward /= _rl_action_vec.size();
