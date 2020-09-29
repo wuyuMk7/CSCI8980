@@ -2,25 +2,38 @@
 #define __CAR_H__
 
 #include "rectangle.h"
+#include "runrl.h"
+#include "rl.h"
 
 #include "GLFW/glfw3.h"
 #include "glm.hpp"
 
+#include "xtensor/xarray.hpp"
+#include "xtensor/xmath.hpp"
+
+#include <cmath>
+#include <unordered_map>
+#include <string>
 #include <algorithm>
 
-class Car : public Drawable, public Movable
+const float car_vel_max = 60.0f;
+const float car_omega_max = 30.0f;
+
+class Car : public Drawable, public Movable, public RLRunnable
 {
 public:
     Car(Shader &shader, Rectangle &rec) : 
-        _shader(shader), _rec(rec), _vel(0.0f) { this->init(); };
+      _shader(shader), _rec(rec), _vel(0.0f), _rl(this) { this->init(); };
     Car(Shader &shader, Rectangle &rec, float vel): 
-        _shader(shader), _rec(rec), _vel(vel) { this->init(); };
+      _shader(shader), _rec(rec), _vel(vel), _rl(this) { this->init(); };
 
     void init();
     void update(float dt);
     void draw();
     void recalcSubRecPos();
     void move(const glm::vec3 &to);
+    void runRL();
+    double scoreRL();
 
     void color(const glm::vec3 &new_color);
     
@@ -31,6 +44,12 @@ public:
     void turnRight(float scale = 1.0f);
 
     void processInput(GLFWwindow *window);
+
+    void setGoal(const glm::vec3 &goal) { this->_goal = goal; };
+    void trainRL(float sim_time, float dt);
+  //    std::unordered_map<std::string, std::vector<std::vector<double>>> runRL(float sim_time, float dt);
+    void forceToMoveTo(const glm::vec3 &to) { this->move(to - this->_rec.tl()); };
+    void forceToRotateTo(const float theta) { this->_theta = theta; };
 private:
     Shader _shader;
     Rectangle& _rec, _rec_sub;
@@ -39,6 +58,12 @@ private:
     float _omega = 0.0f;
     glm::vec3 _color = glm::vec3(0.0f);
     glm::vec3 _main_sub_center_vec = glm::vec3(0.0f);
+
+    glm::vec3 _goal = glm::vec3(0.0f);
+
+    RL _rl;
+    float _rl_sim_time, _rl_dt;
+    std::vector<std::vector<double>> _rl_state_vec, _rl_action_vec;
 };
 
 #endif

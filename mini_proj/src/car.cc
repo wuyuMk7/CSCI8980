@@ -73,13 +73,13 @@ void Car::color(const glm::vec3& new_color)
 
 void Car::accelerate(float scale)
 {
-    this->_vel = std::min(this->_vel + scale * 2.0f, 60.0f);
+    this->_vel = std::min(this->_vel + scale * 2.0f, car_vel_max);
     // std::cout << "a: " << _vel << std::endl;
 }
 
 void Car::decelerate(float scale)
 {
-    this->_vel = std::max(this->_vel - scale * 2.0f, -30.0f);
+    this->_vel = std::max(this->_vel - scale * 2.0f, -car_vel_max / 2);
     // std::cout << "d: " << _vel << std::endl;
 }
 
@@ -95,13 +95,125 @@ void Car::moveForward(float dt)
 
 void Car::turnLeft(float scale)
 {
-    this->_omega = std::min(this->_omega + scale, 30.0f);
+    this->_omega = std::min(this->_omega + scale, car_omega_max);
 }
 
 void Car::turnRight(float scale)
 {
-    this->_omega = std::max(this->_omega - scale, -30.0f);
+    this->_omega = std::max(this->_omega - scale, -car_omega_max);
 }
+
+void Car::trainRL(float sim_time, float dt)
+{
+  this->_rl_sim_time = sim_time;
+  this->_rl_dt = dt;
+
+  this->_rl.train();
+}
+
+void Car::runRL()
+{
+  double dou_times;
+  modf(_rl_sim_time / _rl_dt, &dou_times);
+
+  double c_x = _rec.tl().x, c_y = _rec.tl().y, c_theta = _theta;
+  std::vector<std::vector<double>> state_list, action_list;
+  state_list.emplace_back(std::vector<double> {c_x, c_y, c_theta, _goal.x, _goal.y});
+
+  int times = (int)dou_times;
+  for (size_t i = 0;i < times; ++i) {
+    xt::xarray<double> cur_state{ c_x, c_y, c_theta,  _goal.x, _goal.y }, next_state;
+    xt::xarray<double> action = this->_rl.run(cur_state);
+
+    // Clamp
+    double new_vel = action[0], new_omega = action[1], new_vel_x, new_vel_y;
+    if (new_vel < 0 && new_vel < -car_vel_max/2) new_vel = -car_vel_max/2;
+    if (new_vel > 0 && new_vel > car_vel_max) new_vel = car_vel_max;
+    if (new_omega < 0 && new_omega < -car_omega_max) new_omega = -car_omega_max;
+    if (new_omega > 0 && new_omega > car_omega_max) new_omega = car_omega_max;
+
+    new_vel_x = new_vel * cos(new_omega);
+    new_vel_y = new_vel * sin(new_omega);
+
+    c_x += new_vel_x * _rl_dt;
+    c_y += new_vel_y * _rl_dt;
+    c_theta += new_omega * _rl_dt;
+
+    state_list.emplace_back(std::vector<double>{ c_x, c_y, c_theta, _goal.x, _goal.y });
+    action_list.emplace_back(std::vector<double>{ action[0], action[1] });
+  }
+
+  _rl_state_vec = state_list;
+  _rl_action_vec = action_list;
+}
+
+double Car::scoreRL()
+{
+  double task_reward = 0;
+
+  std::vector<double> cur_action, cur_state;
+  double dist;
+  for (int i = 0;i < _rl_action_vec.size(); ++i) {
+    cur_action = _rl_action_vec[i];
+    cur_state = _rl_state_vec[i+1];
+
+    double dx = cur_state[3] - cur_state[0], dy = cur_state[4] - cur_state[1];
+    dist = sqrt(dx * dx + dy * dy);
+
+    task_reward -= dist;
+    task_reward -= 0.1 * abs(cur_action[0]);
+    task_reward -= 0.1 * abs(cur_action[1]);
+  }
+
+  if (_rl_action_vec.size() > 0) {
+    if (dist < 300) task_reward += 5000;
+    if (dist < 150) task_reward += 10000;
+    if (dist < 100) task_reward += 30000;
+    if (dist < 50 && abs(cur_action[0]) < 3.0) task_reward += 100000;
+  }
+
+  return task_reward;
+}
+
+/*
+std::unordered_map<std::string, std::vector<std::vector<double>>>
+Car::runRL(float sim_time, float dt)
+{
+  double dou_times;
+  modf(sim_time / dt, &dou_times);
+
+  double c_x = _rec.tl().x, c_y = _rec.tl().y, c_theta = _theta;
+  std::vector<std::vector<double>> state_list, action_list;
+  int times = (int)dou_times;
+  for (size_t i = 0;i < times; ++i) {
+    xt::xarray<double> cur_state{ c_x, c_y, c_theta,  _goal.x, _goal.y }, next_state;
+    xt::xarray<double> action = this->_rl.run(cur_state);
+
+    // Clamp
+    double new_vel = action[0], new_omega = action[1], new_vel_x, new_vel_y;
+    if (new_vel < 0 && new_vel < -car_vel_max/2) new_vel = -car_vel_max/2;
+    if (new_vel > 0 && new_vel > car_vel_max) new_vel = car_vel_max;
+    if (new_omega < 0 && new_omega < -car_omega_max) new_omega = -car_omega_max;
+    if (new_omega > 0 && new_omega > car_omega_max) new_omega = car_omega_max;
+
+    new_vel_x = new_vel * cos(new_omega);
+    new_vel_y = new_vel * sin(new_omega);
+
+    c_x += new_vel_x * dt;
+    c_y += new_vel_y * dt;
+    c_theta += new_omega * dt;
+
+    state_list.emplace_back(std::vector<double>{ c_x, c_y, c_theta, _goal.x, _goal.y });
+    action_list.emplace_back(std::vector<double>{ action[0], action[1] });
+  }
+
+  std::unordered_map<std::string, std::vector<std::vector<double>>> ret_data;
+  ret_data["state"] = state_list;
+  ret_data["action"] = action_list;
+
+  return ret_data;
+}
+*/
 
 void Car::processInput(GLFWwindow *window)
 {
