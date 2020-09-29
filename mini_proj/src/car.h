@@ -16,7 +16,7 @@
 #include <string>
 #include <algorithm>
 
-const float car_vel_max = 80.0f;
+const float car_vel_max = 200.0f;
 const float car_omega_max = 3.14f;
 
 class Car : public Drawable, public Movable, public RLRunnable
@@ -30,6 +30,7 @@ public:
     void init();
     void update(float dt);
     void draw();
+    void draw(size_t cur_state_index);
     void recalcSubRecPos();
     void move(const glm::vec3 &to);
     void runRL();
@@ -50,6 +51,8 @@ public:
   //    std::unordered_map<std::string, std::vector<std::vector<double>>> runRL(float sim_time, float dt);
     void printStates();
     void printActions();
+    size_t curStatesSize() { return _rl_state_vec.size(); };
+    size_t curActionsSize() { return _rl_action_vec.size(); };
     void forceToMoveTo(const glm::vec3 &to) { this->move(to - this->_rec.tl()); };
     void forceToRotateTo(const float theta) { this->_theta = theta; };
 private:

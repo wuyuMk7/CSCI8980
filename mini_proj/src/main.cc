@@ -50,12 +50,13 @@ int main(int argc, char* argv[])
     car.color(glm::vec3(0.5f, 0.0f, 0.0f));
 
     // Train RL
-    car.setGoal(glm::vec3(600.0f, 450.0f, 0.0f));
-    car.trainRL(10.0f, 0.01f);
+    car.setGoal(glm::vec3(500.0f, 300.0f, 0.0f));
+    car.trainRL(8.0f, 0.01f);
     car.runRL();
     car.printActions();
     car.printStates();
 
+    size_t cur_state_index = 0;
     while(!glfwWindowShouldClose(window))
     {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -65,8 +66,10 @@ int main(int argc, char* argv[])
 
         // Or use framerate to calcuate dt
         car.update(0.01f);
-        car.draw();
+        car.draw(cur_state_index);
         car.processInput(window);
+
+        if (cur_state_index < car.curStatesSize() - 1) ++cur_state_index;
 
         glfwSwapBuffers(window);
         glfwPollEvents();    

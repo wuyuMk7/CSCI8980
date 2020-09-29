@@ -31,6 +31,16 @@ void Car::draw()
     this->_rec_sub.draw();
 }
 
+void Car::draw(size_t cur_state_index)
+{
+  if (cur_state_index < _rl_state_vec.size()) {
+    auto cur_state = _rl_state_vec[cur_state_index];
+    this->forceToMoveTo(glm::vec3(cur_state[0], cur_state[1], 0.0f));
+    this->forceToRotateTo(cur_state[2] / M_PI * 180);
+    this->draw();
+  }
+}
+
 void Car::recalcSubRecPos() 
 {
     glm::vec3 tl = _rec.tl(), tr = _rec.tr(), bl = _rec.bl(), br = _rec.br();
@@ -114,7 +124,7 @@ void Car::trainRL(float sim_time, float dt)
 void Car::printStates()
 {
   for (auto &state: _rl_state_vec)
-    std::cout << "State: " <<  state[0] << ", " << state[1] << ", " << state[2] << std::endl;
+    std::cout << "State: " <<  state[0] << ", " << state[1] << ", " << state[2] << ", dist: " << sqrt((state[0] - _goal.x) * (state[0] - _goal.x) + (state[1] - _goal.y) * (state[1] - _goal.y)) << std::endl;
   std::cout << std::endl;
 }
 
@@ -177,8 +187,19 @@ double Car::scoreRL()
     dist = sqrt(dx * dx + dy * dy);
 
     task_reward -= dist;
-    task_reward -= 1 * abs(cur_action[0]) / _rl_action_vec.size();
-    task_reward -= 1 * abs(cur_action[1]) / _rl_action_vec.size();
+    //task_reward -= 1.5 * abs(cur_action[0]);
+    if (dist < 35) task_reward -= 2.5 * abs(cur_action[0]);
+    else if (dist < 100) task_reward -= 1.5 * abs(cur_action[0]);
+    else if (dist < 300) task_reward -= 1.2 * abs(cur_action[0]);
+    else task_reward -= 0.8 * abs(cur_action[0]);
+
+    //task_reward -= 1.5 * abs(cur_action[1]);
+
+    glm::vec2 tar_n = glm::normalize(glm::vec2(dx, dy)),
+      cur_n = glm::normalize(glm::vec2(cos(cur_state[2]), sin(cur_state[2])));
+    double dot_ns = glm::dot(tar_n, cur_n);
+    if (dot_ns > 0.8) task_reward -= 2.0 * abs(cur_action[1]);
+    else task_reward -= 1.2 * abs(cur_action[1]);
 
     // Check borders
     double c_tl_x = cur_state[0], c_tl_y = cur_state[0],
@@ -197,11 +218,15 @@ double Car::scoreRL()
     //task_reward -= 5000;
   }
 
+  // task_reward /= _rl_action_vec.size();
+
   //  this->printActions();
 
   if (_rl_action_vec.size() > 0) {
-    if (dist < 20) task_reward += 1000;
-    if (dist < 10 && abs(cur_action[0]) < 1.0) task_reward += 10000;
+    if (dist < 100) task_reward += 10000;
+    if (dist < 50) task_reward += 20000;
+    if (dist < 30) task_reward += 50000;
+    if (dist < 30 && abs(cur_action[0]) < 3.0) task_reward += 50000;
     //std::cout << cur_state[0] << ", " << cur_state[1] << "," << dist << std::endl;
   }
 
