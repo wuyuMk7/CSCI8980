@@ -1,18 +1,26 @@
-#add_executable(test test.cc)
+set(BLA_VENDOR OpenBLAS)
+find_package(BLAS REQUIRED)
 
 add_subdirectory(glad)
 add_subdirectory(glfw)
-add_subdirectory(glm)
+#add_subdirectory(glm)
 
-add_subdirectory(xtl)
-add_subdirectory(xsimd)
-add_subdirectory(xtensor)
+#set(xtl_DIR ${CMAKE_BINARY_DIR}/src/xtl)
+#set(xsimd_DIR ${CMAKE_BINARY_DIR}/src/xsimd)
+#set(xtensor_DIR ${CMAKE_BINARY_DIR}/src/xtensor)
+
+#add_subdirectory(xtl)
+#add_subdirectory(xsimd)
+#add_subdirectory(xtensor)
+
+#find_package(xtl REQUIRED)
+#find_package(xtensor REQUIRED)
 
 add_compile_options(-O3 -mavx2 -ffast-math)
 
-
-add_executable(main main.cc shader.cc rectangle.cc car.cc cem.cc) 
-target_link_libraries(main PUBLIC glad glfw xtensor)
+add_executable(main main.cc shader.cc rectangle.cc car.cc rl.cc) 
+target_compile_options(main PRIVATE -march=native)
+target_link_libraries(main PUBLIC glad glfw ${BLAS_LIBRARIES})
 
 set_target_properties(
     main 
