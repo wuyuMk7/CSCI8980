@@ -48,7 +48,11 @@ int main(int argc, char* argv[])
     Rectangle car_rec(car_shader, glm::vec3(10.0f, 60.0f, 0.0f), glm::vec3(60.0f, 10.0f, 0.0f));
     Car car(car_shader, car_rec, 0.0f);
     car.color(glm::vec3(0.5f, 0.0f, 0.0f));
-  
+
+    // Train RL
+    car.setGoal(glm::vec3(400.0f, 300.0f, 0.0f));
+    car.trainRL(8.0f, 0.01f);
+
     while(!glfwWindowShouldClose(window))
     {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
