@@ -1,8 +1,11 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
-#include <iostream>
 #include <vector>
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <filesystem>
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"

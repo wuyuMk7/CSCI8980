@@ -18,7 +18,7 @@ add_subdirectory(glfw)
 
 add_compile_options(-O3 -mavx2 -ffast-math)
 
-add_executable(main main.cc shader.cc rectangle.cc car.cc rl.cc) 
+add_executable(main main.cc shader.cc obstacle.cc rectangle.cc car.cc rl.cc) 
 target_compile_options(main PRIVATE -march=native)
 target_link_libraries(main PUBLIC glad glfw ${BLAS_LIBRARIES})
 

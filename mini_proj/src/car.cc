@@ -191,6 +191,7 @@ double Car::scoreRL()
     task_reward -= dist;
     //task_reward -= 1.5 * abs(cur_action[0]);
     if (dist < 35) task_reward -= 2.5 * abs(cur_action[0]);
+    else if (dist < 60) task_reward -= 1.8 * abs(cur_action[0]);
     else if (dist < 100) task_reward -= 1.5 * abs(cur_action[0]);
     else if (dist < 300) task_reward -= 1.2 * abs(cur_action[0]);
     else task_reward -= 0.8 * abs(cur_action[0]);
@@ -200,7 +201,7 @@ double Car::scoreRL()
     glm::vec2 tar_n = glm::normalize(glm::vec2(dx, dy)),
       cur_n = glm::normalize(glm::vec2(cos(cur_state[2]), sin(cur_state[2])));
     double dot_ns = glm::dot(tar_n, cur_n);
-    if (dot_ns > 0.8) task_reward -= 2.0 * abs(cur_action[1]);
+    if (dot_ns > 0.9) task_reward -= 2.0 * abs(cur_action[1]);
     else task_reward -= 1.2 * abs(cur_action[1]);
 
     // Check borders

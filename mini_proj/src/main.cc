@@ -1,7 +1,14 @@
 #include "main.h"
 
+std::string model_filename = "savedModel.csv";
+bool flag_retrain = false, flag_save_model = true, flag_draw_obstacle = true;
+
+glm::vec3 pt_goal(500.0f, 400.0f, 0.0f), pt_starting(60.0f, 80.0f, 0.0f);
+
 int main(int argc, char* argv[])
 {
+    if (argc >= 2) flag_retrain = true;
+
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -45,13 +52,38 @@ int main(int argc, char* argv[])
     glUniformMatrix4fv(proj, 1, GL_FALSE, glm::value_ptr(projection));
 
     // Create a rectangle
-    Rectangle car_rec(car_shader, glm::vec3(10.0f, 60.0f, 0.0f), glm::vec3(60.0f, 10.0f, 0.0f));
+    glm::vec3 car_rec_tl(pt_starting.x - 25.0f, pt_starting.y + 15.0f, pt_starting.z),
+      car_rec_br(pt_starting.x + 25.0f, pt_starting.y - 15.0f, pt_starting.z);
+    Rectangle car_rec(car_shader, car_rec_tl, car_rec_br);
     Car car(car_shader, car_rec, 0.0f);
     car.color(glm::vec3(0.5f, 0.0f, 0.0f));
 
-    // Train RL
+    Obstacle ob(car_shader, (pt_starting + pt_goal) / 2.0f, 30.0f);
+    if (glm::length(pt_goal - pt_starting) > 150.0f) {
+      ob.color(glm::vec3(1.0f, 1.0f, 1.0f));
+      ob.init();
+      car.setObstacle(ob);
+      flag_draw_obstacle = true;
+    }
+
+    // Load model or Train model
+    car.loadModel(model_filename);
+    car.setFLTime(8.0f, 0.01f);
+
+    if (!std::filesystem::exists(model_filename) || flag_retrain) {
+      car.setGoal(glm::vec3(400.0f, 200.0f, 0.0f));
+      car.trainRL(8.0f, 0.01f);
+      //car.setGoal(glm::vec3(200.0f, 300.0f, 0.0f));
+      //car.trainRL(8.0f, 0.01f);
+      //car.setGoal(glm::vec3(600.0f, 500.0f, 0.0f));
+      //car.trainRL(8.0f, 0.01f);
+
+      if (flag_save_model) {
+        car.saveModel(model_filename);
+      }
+    }
+
     car.setGoal(glm::vec3(500.0f, 300.0f, 0.0f));
-    car.trainRL(8.0f, 0.01f);
     car.runRL();
     car.printActions();
     car.printStates();
@@ -64,6 +96,8 @@ int main(int argc, char* argv[])
 
         processInput(window);
 
+        if (flag_draw_obstacle) ob.draw();
+
         // Or use framerate to calcuate dt
         //car.update(0.01f);
         car.draw(cur_state_index);
@@ -72,7 +106,7 @@ int main(int argc, char* argv[])
         if (cur_state_index < car.curStatesSize() - 1) ++cur_state_index;
 
         glfwSwapBuffers(window);
-        glfwPollEvents();    
+        glfwPollEvents();
     }
 
     glfwTerminate();

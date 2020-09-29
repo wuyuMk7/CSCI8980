@@ -109,3 +109,29 @@ void RL::train()
 
   this->cem();
 }
+
+bool RL::check(const std::string &infile)
+{
+  if (std::filesystem::exists(infile))
+    return true;
+
+  return false;
+}
+
+void RL::load(const std::string &infile)
+{
+  if (check(infile)) {
+    std::ifstream ifs(infile);
+    auto data = xt::load_csv<double>(ifs);
+    data.reshape(this->params.shape());
+    this->params = data;
+  }
+}
+
+void RL::save(const std::string &outfile)
+{
+  std::ofstream ofs(outfile);
+  xt::xarray<double> to_be_saved = this->params;
+  to_be_saved.reshape({2, -1});
+  xt::dump_csv(ofs, to_be_saved);
+}

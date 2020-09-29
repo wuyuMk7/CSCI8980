@@ -11,12 +11,14 @@
 #include "xtensor/xrandom.hpp"
 #include "xtensor/xsort.hpp"
 #include "xtensor-blas/xlinalg.hpp"
+#include "xtensor/xcsv.hpp"
 
 #include "tbb/parallel_for.h"
 
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <ctime>
 
 using namespace xt::placeholders;
@@ -29,7 +31,10 @@ xt::xarray<double> doubleLayerModel(unsigned int in_size, unsigned int hidden_si
 class RL 
 {
 public:
-  RL(RLRunnable *obj): _obj(obj) {};
+  RL(RLRunnable *obj): _obj(obj) {
+    policy_size = (in_size + 1) * hidden_size + (hidden_size + 1) * out_size;
+    this->params = xt::zeros<double>({ policy_size });
+  };
   ~RL() {};
 
   void cem();
@@ -43,6 +48,7 @@ public:
 
   void save(const std::string &outfile);
   void load(const std::string &infile);
+  bool check(const std::string &infile);
 
   unsigned int in_size = 5;
   unsigned int out_size = 2;
