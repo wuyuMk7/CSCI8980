@@ -16,8 +16,8 @@
 #include <string>
 #include <algorithm>
 
-const float car_vel_max = 60.0f;
-const float car_omega_max = 30.0f;
+const float car_vel_max = 80.0f;
+const float car_omega_max = 3.14f;
 
 class Car : public Drawable, public Movable, public RLRunnable
 {

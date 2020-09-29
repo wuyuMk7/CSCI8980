@@ -63,15 +63,17 @@ void RL::cem()
     std::vector<double> rewards_v;
     for (size_t j = 0;j < ths.shape(0); ++j) {
       this->params = xt::row(ths, j);
+      //std::cout << xt::mean(params) << " " << xt::stddev(params) << std::endl;
       rewards_v.push_back(this->reward());
     }
+
     xt::xarray<double> rewards = xt::argsort(xt::adapt(rewards_v), 1), rev_rewards(rewards.shape());
     std::copy(rewards.crbegin(), rewards.crend(), rev_rewards.begin());
     rev_rewards = xt::view(rev_rewards, xt::range(_, n_elite));
 
     xt::xarray<double> elite_ths = xt::view(ths, xt::keep(rev_rewards), xt::all());
     this->params = xt::mean(elite_ths, 0);
-    th_std = th_std + xt::stddev(elite_ths, 0) + cem_noise_factor / (i+1);
+    th_std = xt::stddev(elite_ths, 0) + cem_noise_factor / (i+1);
 
     // xt::xarray<double> noises =
     // xt::random::randn<double>((int)cem_batch_size, (int)(params.size()));

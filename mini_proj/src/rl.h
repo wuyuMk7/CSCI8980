@@ -46,7 +46,7 @@ public:
   unsigned int in_size = 5;
   unsigned int out_size = 2;
 
-  unsigned int hidden_size = 5;
+  unsigned int hidden_size = 10;
   unsigned int evaluation_samples = 10;
 
   unsigned int policy_size = 0;

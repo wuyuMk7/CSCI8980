@@ -132,8 +132,8 @@ void Car::runRL()
     if (new_omega < 0 && new_omega < -car_omega_max) new_omega = -car_omega_max;
     if (new_omega > 0 && new_omega > car_omega_max) new_omega = car_omega_max;
 
-    new_vel_x = new_vel * cos(new_omega);
-    new_vel_y = new_vel * sin(new_omega);
+    new_vel_x = new_vel * cos(c_theta);
+    new_vel_y = new_vel * sin(c_theta);
 
     c_x += new_vel_x * _rl_dt;
     c_y += new_vel_y * _rl_dt;
@@ -157,19 +157,23 @@ double Car::scoreRL()
     cur_action = _rl_action_vec[i];
     cur_state = _rl_state_vec[i+1];
 
-    double dx = cur_state[3] - cur_state[0], dy = cur_state[4] - cur_state[1];
+    //double dx = cur_state[3] - cur_state[0], dy = cur_state[4] - cur_state[1];
+    double dx = this->_goal.x - cur_state[0], dy = this->_goal.y - cur_state[1];
     dist = sqrt(dx * dx + dy * dy);
 
     task_reward -= dist;
-    task_reward -= 0.1 * abs(cur_action[0]);
-    task_reward -= 0.1 * abs(cur_action[1]);
+    task_reward -= 1 * abs(cur_action[0]);
+    task_reward -= 1 * abs(cur_action[1]);
+
+    // Check borders
+    if (cur_state[0] < 0 || cur_state[1] < 0 || cur_state[0] > 800 || cur_state[0] > 600)
+      task_reward -= 1000;
   }
 
   if (_rl_action_vec.size() > 0) {
-    if (dist < 300) task_reward += 5000;
-    if (dist < 150) task_reward += 10000;
-    if (dist < 100) task_reward += 30000;
-    if (dist < 50 && abs(cur_action[0]) < 3.0) task_reward += 100000;
+    if (dist < 100) task_reward += 3000;
+    if (dist < 50 && abs(cur_action[0]) < 3.0) task_reward += 10000;
+    //std::cout << cur_state[0] << ", " << cur_state[1] << "," << dist << std::endl;
   }
 
   return task_reward;
