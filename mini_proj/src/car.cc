@@ -111,6 +111,20 @@ void Car::trainRL(float sim_time, float dt)
   this->_rl.train();
 }
 
+void Car::printStates()
+{
+  for (auto &state: _rl_state_vec)
+    std::cout << "State: " <<  state[0] << ", " << state[1] << ", " << state[2] << std::endl;
+  std::cout << std::endl;
+}
+
+void Car::printActions()
+{
+  for (auto &action : _rl_action_vec)
+    std::cout << "Action: " << action[0] << ", " << action[1] << std::endl;
+  std::cout << std::endl;
+}
+
 void Car::runRL()
 {
   double dou_times;
@@ -128,6 +142,7 @@ void Car::runRL()
     // Clamp
     double new_vel = action[0], new_omega = action[1], new_vel_x, new_vel_y;
     if (new_vel < 0 && new_vel < -car_vel_max/2) new_vel = -car_vel_max/2;
+    //if (new_vel < 0) new_vel = 0;
     if (new_vel > 0 && new_vel > car_vel_max) new_vel = car_vel_max;
     if (new_omega < 0 && new_omega < -car_omega_max) new_omega = -car_omega_max;
     if (new_omega > 0 && new_omega > car_omega_max) new_omega = car_omega_max;
@@ -162,17 +177,31 @@ double Car::scoreRL()
     dist = sqrt(dx * dx + dy * dy);
 
     task_reward -= dist;
-    task_reward -= 1 * abs(cur_action[0]);
-    task_reward -= 1 * abs(cur_action[1]);
+    task_reward -= 1 * abs(cur_action[0]) / _rl_action_vec.size();
+    task_reward -= 1 * abs(cur_action[1]) / _rl_action_vec.size();
 
     // Check borders
-    if (cur_state[0] < 0 || cur_state[1] < 0 || cur_state[0] > 800 || cur_state[0] > 600)
-      task_reward -= 1000;
+    double c_tl_x = cur_state[0], c_tl_y = cur_state[0],
+      c_dx = c_tl_x - _rec.tl().x, c_dy = c_tl_y - _rec.tl().y;
+    double max_x = 800, max_y = 600;
+    if (c_tl_x < 0 || c_tl_y < 0 || c_tl_x > max_x || c_tl_y > max_y ||
+        _rec.tr().x + c_dx < 0 || _rec.tr().x + c_dx > max_x ||
+        _rec.tr().y + c_dy < 0 || _rec.tr().y + c_dy > max_y ||
+        _rec.br().x + c_dx < 0 || _rec.br().x + c_dx > max_x ||
+        _rec.br().y + c_dy < 0 || _rec.br().y + c_dy > max_y ||
+        _rec.bl().x + c_dx < 0 || _rec.bl().x + c_dx > max_x ||
+        _rec.bl().y + c_dy < 0 || _rec.bl().y + c_dy > max_y)
+      task_reward -= 500;
+
+    //if (cur_state[0] < 0 || cur_state[1] < 0 || cur_state[0] > 800 || cur_state[0] > 600)
+    //task_reward -= 5000;
   }
 
+  //  this->printActions();
+
   if (_rl_action_vec.size() > 0) {
-    if (dist < 100) task_reward += 3000;
-    if (dist < 50 && abs(cur_action[0]) < 3.0) task_reward += 10000;
+    if (dist < 20) task_reward += 1000;
+    if (dist < 10 && abs(cur_action[0]) < 1.0) task_reward += 10000;
     //std::cout << cur_state[0] << ", " << cur_state[1] << "," << dist << std::endl;
   }
 

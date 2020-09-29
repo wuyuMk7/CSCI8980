@@ -17,6 +17,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <ctime>
 
 using namespace xt::placeholders;
 
@@ -55,9 +56,9 @@ public:
   unsigned int cem_batch_size = 50;
   unsigned int cem_print_rate = 5;
 
-  double cem_elite_frac = 0.5;
+  double cem_elite_frac = 0.25;
   double cem_mean = 1.0;
-  double cem_stddev = 1.0;
+  double cem_stddev = 0.5;
   double cem_noise_factor = 1.0;
 
   unsigned int rl_num_of_tasks = 1;

@@ -48,6 +48,8 @@ public:
     void setGoal(const glm::vec3 &goal) { this->_goal = goal; };
     void trainRL(float sim_time, float dt);
   //    std::unordered_map<std::string, std::vector<std::vector<double>>> runRL(float sim_time, float dt);
+    void printStates();
+    void printActions();
     void forceToMoveTo(const glm::vec3 &to) { this->move(to - this->_rec.tl()); };
     void forceToRotateTo(const float theta) { this->_theta = theta; };
 private:

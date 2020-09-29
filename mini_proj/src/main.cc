@@ -50,8 +50,11 @@ int main(int argc, char* argv[])
     car.color(glm::vec3(0.5f, 0.0f, 0.0f));
 
     // Train RL
-    car.setGoal(glm::vec3(200.0f, 200.0f, 0.0f));
-    car.trainRL(10.0f, 0.1f);
+    car.setGoal(glm::vec3(600.0f, 450.0f, 0.0f));
+    car.trainRL(10.0f, 0.01f);
+    car.runRL();
+    car.printActions();
+    car.printStates();
 
     while(!glfwWindowShouldClose(window))
     {
