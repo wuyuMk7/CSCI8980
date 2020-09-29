@@ -35,8 +35,10 @@ void Car::draw(size_t cur_state_index)
 {
   if (cur_state_index < _rl_state_vec.size()) {
     auto cur_state = _rl_state_vec[cur_state_index];
+    double new_theta = cur_state[2] / M_PI * 180, angle_diff = new_theta - this->_theta;
+    this->_main_sub_center_vec = glm::rotateZ(this->_main_sub_center_vec, (float)glm::radians(angle_diff));
     this->forceToMoveTo(glm::vec3(cur_state[0], cur_state[1], 0.0f));
-    this->forceToRotateTo(cur_state[2] / M_PI * 180);
+    this->forceToRotateTo(new_theta);
     this->draw();
   }
 }
