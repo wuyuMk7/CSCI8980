@@ -58,7 +58,7 @@ int main(int argc, char* argv[])
     Car car(car_shader, car_rec, 0.0f);
     car.color(glm::vec3(0.5f, 0.0f, 0.0f));
 
-    Obstacle ob(car_shader, (pt_starting + pt_goal) / 2.0f, 30.0f);
+    Obstacle ob(car_shader, (pt_starting + pt_goal) / 2.0f, 30.0f); //Tongyu change goal  here
     if (glm::length(pt_goal - pt_starting) > 150.0f) {
       ob.color(glm::vec3(1.0f, 1.0f, 1.0f));
       ob.init();
