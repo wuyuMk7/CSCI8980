@@ -127,7 +127,7 @@ void Car::trainRL(float sim_time, float dt)
 void Car::printStates()
 {
   for (auto &state: _rl_state_vec)
-    std::cout << "State: " <<  state[0] << ", " << state[1] << ", " << state[2] << ", dist: " << sqrt((state[0] - _goal.x) * (state[0] - _goal.x) + (state[1] - _goal.y) * (state[1] - _goal.y)) << std::endl;
+    std::cout << "State: " <<  state[0] << ", " << state[1] << ", " << state[2] << ", dist: " << sqrt((state[4] ) * (state[4] ) + (state[3] ) * (state[3])) << std::endl;
   std::cout << std::endl;
 }
 
@@ -143,20 +143,19 @@ void Car::runRL()
   double dou_times;
   modf(_rl_sim_time / _rl_dt, &dou_times);
 
-  double c_x = _rec.tl().x, c_y = _rec.tl().y, c_theta = _theta;
-  std::vector<std::vector<double>> state_list, action_list;
   glm::vec3 center_pos = (_rec.tl() + _rec.br()) / 2.0f;
+  double c_x = center_pos.x, c_y = center_pos.y, c_theta = _theta;
+  std::vector<std::vector<double>> state_list, action_list;
   double safe_gap = glm::length(center_pos - _ob.center()) - _ob.radius();
   state_list.emplace_back(std::vector<double> { c_x, c_y, c_theta, _goal.x - center_pos.x, _goal.y - center_pos.y, _ob.center().x - center_pos.x, _ob.center().y - center_pos.y, safe_gap});
 
   int times = (int)dou_times;
   for (size_t i = 0;i < times; ++i) {
     // MTongyu Maybe wrong
-    center_pos = (_rec.tl() + _rec.br()) / 2.0f;
     safe_gap = glm::length(center_pos - _ob.center()) - _ob.radius();
 
     // xt::xarray<double> cur_state{ c_x, c_y, c_theta,  _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() };
-    xt::xarray<double> cur_state{ c_x, c_y, c_theta, _goal.x - center_pos.x, _goal.y - center_pos.y, _ob.center().x - center_pos.x, _ob.center().y - center_pos.y, safe_gap};
+    xt::xarray<double> cur_state{ c_x, c_y, c_theta, _goal.x - c_x, _goal.y - c_y, _ob.center().x - c_x, _ob.center().y - c_y, safe_gap};
     xt::xarray<double> next_state, action = this->_rl.run(cur_state);
 
     // Clamp
@@ -175,7 +174,7 @@ void Car::runRL()
     c_theta += new_omega * _rl_dt;
 
     // state_list.emplace_back(std::vector<double>{ c_x, c_y, c_theta, _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() });
-    state_list.emplace_back(std::vector<double> { c_x, c_y, c_theta, _goal.x - center_pos.x, _goal.y - center_pos.y, _ob.center().x - center_pos.x, _ob.center().y - center_pos.y, safe_gap});
+    state_list.emplace_back(std::vector<double> { c_x, c_y, c_theta, _goal.x - c_x, _goal.y - c_y, _ob.center().x - c_x, _ob.center().y - center_pos.y, safe_gap});
     action_list.emplace_back(std::vector<double>{ action[0], action[1] });
   }
 
@@ -194,7 +193,7 @@ double Car::scoreRL()
     cur_state = _rl_state_vec[i+1];
 
     //double dx = cur_state[3] - cur_state[0], dy = cur_state[4] - cur_state[1];
-    double dx = this->_goal.x - cur_state[0], dy = this->_goal.y - cur_state[1];
+    double dx = cur_state[3], dy = cur_state[4];
     dist = sqrt(dx * dx + dy * dy);
 
     task_reward -= dist * 4;
@@ -231,7 +230,7 @@ double Car::scoreRL()
 
     // Check for obstacles
     // calculate distance to all other obstacles
-    glm::vec3 curr_car_center = (this->_rec.bl() + this->_rec.tr()) * 0.5f;
+    glm::vec3 curr_car_center = glm::vec3(cur_state[0],cur_state[1], 0.0f);
     double obs_dist = glm::length(curr_car_center - this->_ob.center());
     double colli_dist = this->_ob.radius() + 0.5 * glm::length(this->_rec.bl() - this->_rec.tr());
     double obs_gap_car = obs_dist - colli_dist;
@@ -254,8 +253,13 @@ double Car::scoreRL()
   auto final_state = _rl_state_vec[_rl_state_vec.size()-1];
   auto final_action = _rl_action_vec[_rl_action_vec.size()-1];
   double final_dist = dist;
-  if (final_dist < 40.0) task_reward += 20000;
-  if (final_dist < 20.0 && abs(final_action[0]) < 5) task_reward += 40000;
+  if (final_dist < 40.0) 
+    task_reward += 20000;
+    std::cout << "Almost there" << std::endl;
+  if (final_dist < 20.0 && abs(final_action[0]) < 5) {
+    task_reward += 80000;
+    std::cout << "Target Hit" << std::endl;
+  }
   // task_reward /= _rl_action_vec.size();
 
   //  this->printActions();
