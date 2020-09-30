@@ -59,7 +59,7 @@ void RL::cem()
   xt::random::seed(time(NULL));
   for (size_t i = 0;i < cem_iterations; ++i) {
     xt::xarray<double> noises = th_std * xt::random::randn<double>({ (int)cem_batch_size, (int)(this->params.size()) });
-    xt::xarray<double> ths = params + noises;
+    xt::xarray<double> ths = params + noises ; //
 
     std::vector<double> rewards_v;
     for (size_t j = 0;j < ths.shape(0); ++j) {
@@ -78,7 +78,7 @@ void RL::cem()
 
     //std::cout << xt::adapt(params.shape()) << std::endl;
     //std::cout << xt::adapt(th_std.shape()) << std::endl;
-    std::cout << xt::mean(th_std) << std::endl;
+    std::cout << "th_std" << xt::mean(th_std) << std::endl;
     //return;
   }
 }

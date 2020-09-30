@@ -13,7 +13,7 @@
 #include "xtensor-blas/xlinalg.hpp"
 #include "xtensor/xcsv.hpp"
 
-#include "tbb/parallel_for.h"
+//#include "tbb/parallel_for.h"
 
 #include <string>
 #include <iostream>
@@ -62,7 +62,7 @@ public:
   unsigned int cem_batch_size = 50;
   unsigned int cem_print_rate = 5;
 
-  double cem_elite_frac = 0.25;
+  double cem_elite_frac = 0.5;
   double cem_mean = 1.0;
   double cem_stddev = 0.5;
   double cem_noise_factor = 1.0;

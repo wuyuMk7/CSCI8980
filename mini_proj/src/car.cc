@@ -74,6 +74,7 @@ void Car::move(const glm::vec3& to)
     this->_rec_sub.move(this->_main_sub_center_vec - cur_main_sub_cen_vec);
     this->_rec_sub.rotateTo(this->_theta);
     this->_rec_sub.move(to);
+
 }
 
 void Car::color(const glm::vec3& new_color)
@@ -144,11 +145,18 @@ void Car::runRL()
 
   double c_x = _rec.tl().x, c_y = _rec.tl().y, c_theta = _theta;
   std::vector<std::vector<double>> state_list, action_list;
-  state_list.emplace_back(std::vector<double> { c_x, c_y, c_theta, _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() });
+  glm::vec3 center_pos = (_rec.tl() + _rec.br()) / 2.0f;
+  double safe_gap = glm::length(center_pos - _ob.center()) - _ob.radius();
+  state_list.emplace_back(std::vector<double> { c_x, c_y, c_theta, _goal.x - center_pos.x, _goal.y - center_pos.y, _ob.center().x - center_pos.x, _ob.center().y - center_pos.y, safe_gap});
 
   int times = (int)dou_times;
   for (size_t i = 0;i < times; ++i) {
-    xt::xarray<double> cur_state{ c_x, c_y, c_theta,  _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() };
+    // MTongyu Maybe wrong
+    center_pos = (_rec.tl() + _rec.br()) / 2.0f;
+    safe_gap = glm::length(center_pos - _ob.center()) - _ob.radius();
+
+    // xt::xarray<double> cur_state{ c_x, c_y, c_theta,  _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() };
+    xt::xarray<double> cur_state{ c_x, c_y, c_theta, _goal.x - center_pos.x, _goal.y - center_pos.y, _ob.center().x - center_pos.x, _ob.center().y - center_pos.y, safe_gap};
     xt::xarray<double> next_state, action = this->_rl.run(cur_state);
 
     // Clamp
@@ -166,7 +174,8 @@ void Car::runRL()
     c_y += new_vel_y * _rl_dt;
     c_theta += new_omega * _rl_dt;
 
-    state_list.emplace_back(std::vector<double>{ c_x, c_y, c_theta, _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() });
+    // state_list.emplace_back(std::vector<double>{ c_x, c_y, c_theta, _goal.x, _goal.y, _ob.center().x, _ob.center().y, _ob.radius() });
+    state_list.emplace_back(std::vector<double> { c_x, c_y, c_theta, _goal.x - center_pos.x, _goal.y - center_pos.y, _ob.center().x - center_pos.x, _ob.center().y - center_pos.y, safe_gap});
     action_list.emplace_back(std::vector<double>{ action[0], action[1] });
   }
 
@@ -188,21 +197,24 @@ double Car::scoreRL()
     double dx = this->_goal.x - cur_state[0], dy = this->_goal.y - cur_state[1];
     dist = sqrt(dx * dx + dy * dy);
 
-    task_reward -= dist;
+    task_reward -= dist * 4;
+    task_reward -= abs(cur_action[0]);
+    task_reward -= abs(cur_action[1]);
+
     //task_reward -= 1.5 * abs(cur_action[0]);
-    if (dist < 35) task_reward -= 2.5 * abs(cur_action[0]);
-    else if (dist < 60) task_reward -= 1.8 * abs(cur_action[0]);
-    else if (dist < 100) task_reward -= 1.5 * abs(cur_action[0]);
-    else if (dist < 300) task_reward -= 1.2 * abs(cur_action[0]);
-    else task_reward -= 0.8 * abs(cur_action[0]);
+    // if (dist < 35) task_reward -= 2.5 * abs(cur_action[0]);
+    // else if (dist < 60) task_reward -= 1.8 * abs(cur_action[0]);
+    // else if (dist < 100) task_reward -= 1.5 * abs(cur_action[0]);
+    // else if (dist < 300) task_reward -= 1.2 * abs(cur_action[0]);
+    // else task_reward -= 0.8 * abs(cur_action[0]);
 
     //task_reward -= 1.5 * abs(cur_action[1]);
 
     glm::vec2 tar_n = glm::normalize(glm::vec2(dx, dy)),
       cur_n = glm::normalize(glm::vec2(cos(cur_state[2]), sin(cur_state[2])));
     double dot_ns = glm::dot(tar_n, cur_n);
-    if (dot_ns > 0.9) task_reward -= 2.0 * abs(cur_action[1]);
-    else task_reward -= 1.2 * abs(cur_action[1]);
+    // if (dot_ns > 0.9) task_reward -= 2.0 * abs(cur_action[1]);
+    // else task_reward -= 1.2 * abs(cur_action[1]);
 
     // Check borders
     double c_tl_x = cur_state[0], c_tl_y = cur_state[0],
@@ -217,21 +229,44 @@ double Car::scoreRL()
         _rec.bl().y + c_dy < 0 || _rec.bl().y + c_dy > max_y)
       task_reward -= 500;
 
+    // Check for obstacles
+    // calculate distance to all other obstacles
+    glm::vec3 curr_car_center = (this->_rec.bl() + this->_rec.tr()) * 0.5f;
+    double obs_dist = glm::length(curr_car_center - this->_ob.center());
+    double colli_dist = this->_ob.radius() + 0.5 * glm::length(this->_rec.bl() - this->_rec.tr());
+    double obs_gap_car = obs_dist - colli_dist;
+    if (obs_gap_car < 0.0) {
+      task_reward -= 2000;
+      std::cout << "collision" << std::endl;
+      break;
+    } else {
+      task_reward += obs_dist;
+    }
+
+    // find min dist
+
+    // penalize
+
     //if (cur_state[0] < 0 || cur_state[1] < 0 || cur_state[0] > 800 || cur_state[0] > 600)
     //task_reward -= 5000;
   }
 
+  auto final_state = _rl_state_vec[_rl_state_vec.size()-1];
+  auto final_action = _rl_action_vec[_rl_action_vec.size()-1];
+  double final_dist = dist;
+  if (final_dist < 40.0) task_reward += 20000;
+  if (final_dist < 20.0 && abs(final_action[0]) < 5) task_reward += 40000;
   // task_reward /= _rl_action_vec.size();
 
   //  this->printActions();
 
-  if (_rl_action_vec.size() > 0) {
-    if (dist < 100) task_reward += 10000;
-    if (dist < 50) task_reward += 20000;
-    if (dist < 30) task_reward += 50000;
-    if (dist < 30 && abs(cur_action[0]) < 3.0) task_reward += 50000;
-    //std::cout << cur_state[0] << ", " << cur_state[1] << "," << dist << std::endl;
-  }
+  // if (_rl_action_vec.size() > 0) {
+  //   if (dist < 100) task_reward += 10000;
+  //   if (dist < 50) task_reward += 20000;
+  //   if (dist < 30) task_reward += 50000;
+  //   if (dist < 30 && abs(cur_action[0]) < 3.0) task_reward += 50000;
+  //   //std::cout << cur_state[0] << ", " << cur_state[1] << "," << dist << std::endl;
+  // }
 
   return task_reward;
 }
