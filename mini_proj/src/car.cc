@@ -196,9 +196,9 @@ double Car::scoreRL()
     double dx = cur_state[3], dy = cur_state[4];
     dist = sqrt(dx * dx + dy * dy);
 
-    task_reward -= dist * 4;
-    task_reward -= abs(cur_action[0]);
-    task_reward -= abs(cur_action[1]);
+    task_reward -= dist * 5;
+    task_reward -= abs(cur_action[0]) * 4;
+    task_reward -= abs(cur_action[1]) * 4;
 
     //task_reward -= 1.5 * abs(cur_action[0]);
     // if (dist < 35) task_reward -= 2.5 * abs(cur_action[0]);
@@ -236,10 +236,11 @@ double Car::scoreRL()
     double obs_gap_car = obs_dist - colli_dist;
     if (obs_gap_car < 0.0) {
       task_reward -= 2000;
-      std::cout << "collision" << std::endl;
-      break;
+      // std::cout << "collision" << std::endl;
     } else {
-      task_reward += obs_dist;
+      if (obs_gap_car < 5) {
+        task_reward -= 200;
+      }
     }
 
     // find min dist
@@ -254,10 +255,10 @@ double Car::scoreRL()
   auto final_action = _rl_action_vec[_rl_action_vec.size()-1];
   double final_dist = dist;
   if (final_dist < 40.0) 
-    task_reward += 20000;
-    std::cout << "Almost there" << std::endl;
+    task_reward += 200000;
+    // std::cout << "Almost there" << std::endl;
   if (final_dist < 20.0 && abs(final_action[0]) < 5) {
-    task_reward += 80000;
+    task_reward += 8000000;
     std::cout << "Target Hit" << std::endl;
   }
   // task_reward /= _rl_action_vec.size();
