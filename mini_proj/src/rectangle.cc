@@ -6,6 +6,11 @@ void Rectangle::init()
     glm::vec3 b_tl = this->_tl - trans, b_tr = this->_tr - trans,
               b_bl = ori, b_br = this->_br - trans;
 
+    this->_otl = _tl;
+    this->_otr = _tr;
+    this->_obl = _bl;
+    this->_obr = _br;
+
     _initial_center = (b_bl + b_tr) * 0.5f;
 
     float base_verts[] = {

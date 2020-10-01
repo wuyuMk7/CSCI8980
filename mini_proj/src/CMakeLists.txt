@@ -17,6 +17,7 @@ add_subdirectory(glfw)
 #find_package(xtensor REQUIRED)
 
 add_compile_options(-O3 -mavx2 -ffast-math)
+#add_compile_options(-O3)
 
 add_executable(main main.cc shader.cc obstacle.cc rectangle.cc car.cc rl.cc) 
 target_compile_options(main PRIVATE -march=native)

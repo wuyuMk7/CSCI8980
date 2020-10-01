@@ -6,6 +6,8 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <cmath>
+#include <time.h>
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"

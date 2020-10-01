@@ -51,24 +51,35 @@ public:
   void switchModel2();
   void switchModel3();
 
-  unsigned int in_size = 8;
+  unsigned int in_size = 5;
+  //unsigned int in_size = 5;
   unsigned int out_size = 2;
 
   unsigned int model_version = 2;
-  unsigned int hidden_size = 100;
-  unsigned int hidden_size1 = 10;
-  unsigned int hidden_size2 = 20;
+  unsigned int hidden_size = 10;
+  unsigned int hidden_size1 = 8;
+  unsigned int hidden_size2 = 4;
   unsigned int evaluation_samples = 10;
 
   unsigned int policy_size = 0;
-
+  /*
   unsigned int cem_iterations = 100;
-  unsigned int cem_batch_size = 100;
+  unsigned int cem_batch_size = 50;
   unsigned int cem_print_rate = 5;
 
-  double cem_elite_frac = 0.25;
+  double cem_elite_frac = 0.5;
   double cem_mean = 1.0;
-  double cem_stddev = 0.5;
+  double cem_stddev = 1.0;
+  double cem_noise_factor = 0.8;
+  */
+
+  unsigned int cem_iterations = 200;
+  unsigned int cem_batch_size = 200;
+  unsigned int cem_print_rate = 5;
+
+  double cem_elite_frac = 0.4;
+  double cem_mean = 1.0;
+  double cem_stddev = 1.0;
   double cem_noise_factor = 1.0;
 
   unsigned int rl_num_of_tasks = 1;

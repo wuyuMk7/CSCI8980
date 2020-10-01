@@ -36,6 +36,7 @@ public:
     void move(const glm::vec3 &to);
     void runRL();
     double scoreRL();
+    void reset();
 
     void color(const glm::vec3 &new_color);
 
@@ -70,6 +71,7 @@ private:
     float _vel = 1.0f;
     float _theta = 0.0f;
     float _omega = 0.0f;
+    float _car_radius = 0.0f;
     glm::vec3 _color = glm::vec3(0.0f);
     glm::vec3 _main_sub_center_vec = glm::vec3(0.0f);
     glm::vec3 _initial_car_center = glm::vec3(0.0f);

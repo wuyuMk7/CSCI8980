@@ -92,8 +92,8 @@ void RL::cem()
   modf(cem_batch_size * cem_elite_frac, &dou_n_elite);
   int n_elite = (int)dou_n_elite;
 
-  xt::xarray<double> th_std = xt::ones_like(this->params) * this->cem_stddev;
   xt::random::seed(time(NULL));
+  xt::xarray<double> th_std = xt::ones_like(this->params) * this->cem_stddev;
   for (size_t i = 0;i < cem_iterations; ++i) {
     xt::xarray<double> noises = th_std * xt::random::randn<double>({ (int)cem_batch_size, (int)(this->params.size()) });
     xt::xarray<double> ths = params + noises;
@@ -111,11 +111,17 @@ void RL::cem()
 
     xt::xarray<double> elite_ths = xt::view(ths, xt::keep(rev_rewards), xt::all());
     this->params = xt::mean(elite_ths, {0});
+    //th_std = xt::stddev(elite_ths,{0}) + cem_noise_factor / (i+1);
+
+    //if (i < 30)
+    //th_std = xt::stddev(elite_ths,{0}) + cem_noise_factor;
+    //else
     th_std = xt::stddev(elite_ths,{0}) + cem_noise_factor / (i+1);
 
     //std::cout << xt::adapt(params.shape()) << std::endl;
     //std::cout << xt::adapt(th_std.shape()) << std::endl;
-    std::cout << xt::mean(th_std) << std::endl;
+    std::cout << "Reward mean in it#" << i << " " << xt::mean(xt::adapt(rewards_v)) << std::endl;
+    std::cout << "STD mean in it#" << i << " " << xt::mean(th_std) << std::endl;
     //return;
   }
 }
@@ -129,7 +135,7 @@ double RL::reward()
     total_reward += _obj->scoreRL();
   }
 
-  std::cout << total_reward << std::endl;
+  //std::cout << total_reward << std::endl;
   return total_reward / rl_num_of_tasks;
 }
 
@@ -193,6 +199,7 @@ void RL::save(const std::string &outfile)
 {
   std::ofstream ofs(outfile);
   xt::xarray<double> to_be_saved = this->params;
+  std::cout << to_be_saved << std::endl;
   to_be_saved.reshape({2, -1});
   xt::dump_csv(ofs, to_be_saved);
 }

@@ -1,9 +1,33 @@
 #include "main.h"
 
 std::string model_filename = "savedModel.csv";
-bool flag_retrain = false, flag_save_model = true, flag_draw_obstacle = true;
+bool flag_retrain = false, flag_save_model = true, flag_draw_obstacle = false;
+bool allow_mouse_click = false, flag_next_goal = false;
+bool flag_time_to_run = false;
 
-glm::vec3 pt_goal(500.0f, 400.0f, 0.0f), pt_starting(60.0f, 80.0f, 0.0f);
+glm::vec3 pt_goal(500.0f, 400.0f, 0.0f), pt_starting(60.0f, 80.0f, 0.0f), next_pt_goal;
+float sim_time = 8.0f, dt = 0.05f;
+
+int cur_state_index = -1;
+
+void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
+{
+  if (!allow_mouse_click) return;
+
+  if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS) {
+    double xPos, yPos;
+    glfwGetCursorPos(window, &xPos, &yPos);
+    //std::cout << xPos << " " << yPos << std::endl;
+    next_pt_goal = glm::vec3((float)xPos, 600.0f - (float)yPos, 0.0f);
+    flag_next_goal = true;
+  }
+}
+
+void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
+{
+  if (key == GLFW_KEY_ENTER && action == GLFW_PRESS)
+    flag_time_to_run = true;
+}
 
 int main(int argc, char* argv[])
 {
@@ -20,7 +44,7 @@ int main(int argc, char* argv[])
     #endif
 
     GLFWwindow* window = glfwCreateWindow(800, 600, 
-        "Mini Project (Press W-A-S-D to control, Esc to exit)", NULL, NULL);
+        "CSCI8980 Mini Project", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -28,14 +52,15 @@ int main(int argc, char* argv[])
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwSetMouseButtonCallback(window, mouseButtonCallback);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetKeyCallback(window, keyCallback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
        std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
-
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback); 
 
     // Load shaders & set view matrices for car shader
     Shader car_shader;
@@ -63,33 +88,71 @@ int main(int argc, char* argv[])
       ob.color(glm::vec3(1.0f, 1.0f, 1.0f));
       ob.init();
       car.setObstacle(ob);
-      flag_draw_obstacle = true;
+      //flag_draw_obstacle = true;
     }
 
+    // Create array for goal point
+    float *arr_goal_point = new float[6];
+    arr_goal_point[0] = pt_goal.x;
+    arr_goal_point[1] = pt_goal.y;
+    arr_goal_point[2] = pt_goal.x-5.0f;
+    arr_goal_point[3] = pt_goal.y-5.0f;
+    arr_goal_point[4] = pt_goal.x+5.0f;
+    arr_goal_point[5] = pt_goal.y-5.0f;
+
+    GLuint goal_pt_vbo;
+    glGenBuffers(1, &goal_pt_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, goal_pt_vbo);
+    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), arr_goal_point, GL_STATIC_DRAW);
+
+    GLuint goal_pt_vao;
+    glGenVertexArrays(1, &goal_pt_vao);
+    glBindVertexArray(goal_pt_vao);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
     // Load model or Train model
+    clock_t start, end;
     if (!std::filesystem::exists(model_filename) || flag_retrain) {
+      start = clock();
+      //car.setGoal(glm::vec3(500.0f, 400.0f, 0.0f));
+      car.setGoal(pt_goal);
+      car.trainRL(sim_time, dt);
+      end = clock();
+      std::cout << "\nTraining costs: " << (double)(end-start) / CLOCKS_PER_SEC << " secs." << std::endl;
+      /*
+      car.setGoal(glm::vec3(200.0f, 300.0f, 0.0f));
+      car.trainRL(sim_time, dt);
       car.setGoal(glm::vec3(400.0f, 200.0f, 0.0f));
-      car.trainRL(8.0f, 0.01f);
-      //car.setGoal(glm::vec3(200.0f, 300.0f, 0.0f));
-      //car.trainRL(8.0f, 0.01f);
-      //car.setGoal(glm::vec3(600.0f, 500.0f, 0.0f));
-      //car.trainRL(8.0f, 0.01f);
+      car.trainRL(sim_time, dt);
+      car.setGoal(glm::vec3(530.0f, 210.0f, 0.0f));
+      car.trainRL(sim_time, dt);
+      car.setGoal(glm::vec3(300.0f, 320.0f, 0.0f));
+      car.trainRL(sim_time, dt);
+      */
 
       if (flag_save_model) {
         car.saveModel(model_filename);
       }
     } else {
       car.loadModel(model_filename);
-      car.setFLTime(8.0f, 0.01f);
+      car.setFLTime(sim_time, dt);
     }
 
     car.setGoal(pt_goal);
     //car.setGoal(glm::vec3(400.0f, 200.0f, 0.0f));
     car.runRL();
+    std::cout << "Current reward: " << car.scoreRL() << std::endl;
     car.printActions();
     car.printStates();
 
-    size_t cur_state_index = 0;
+    // Renderer
+
+    cur_state_index = 0;
+    allow_mouse_click = true;
     while(!glfwWindowShouldClose(window))
     {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -97,19 +160,58 @@ int main(int argc, char* argv[])
 
         processInput(window);
 
-        if (flag_draw_obstacle) ob.draw();
+        if (flag_time_to_run) {
+          glm::mat4 goal_pt_model(1.0f);
+          glUniformMatrix4fv(glGetUniformLocation(car_shader.id(), "model"), 1,
+                             false, glm::value_ptr(goal_pt_model));
+          glUniform3f(glGetUniformLocation(car_shader.id(), "in_color"), 1.0f,
+                      1.0f, 1.0f);
+          glBindVertexArray(goal_pt_vao);
+          glDrawArrays(GL_TRIANGLES, 0, 3);
+          glBindVertexArray(0);
 
-        // Or use framerate to calcuate dt
-        //car.update(0.01f);
-        car.draw(cur_state_index);
-        car.processInput(window);
+          if (flag_draw_obstacle) ob.draw();
 
-        if (cur_state_index < car.curStatesSize() - 1) ++cur_state_index;
+          // Or use framerate to calcuate dt
+          //car.update(0.01f);
+          car.draw(cur_state_index);
+          car.processInput(window);
+
+          if (cur_state_index < car.curStatesSize() - 1) ++cur_state_index;
+          else if (flag_next_goal) {
+            std::cout << "Next goal received!" << std::endl;
+            flag_next_goal = false;
+
+            //car.reset();
+            //car.color(glm::vec3(0.5f, 0.0f, 0.0f));
+            car.setGoal(next_pt_goal);
+            car.runRL();
+            std::cout << "Current reward: " << car.scoreRL() << std::endl;
+            car.printActions();
+            car.printStates();
+            cur_state_index = 0;
+
+            // Refill pt goal array
+            arr_goal_point[0] = next_pt_goal.x;
+            arr_goal_point[1] = next_pt_goal.y;
+            arr_goal_point[2] = next_pt_goal.x-5.0f;
+            arr_goal_point[3] = next_pt_goal.y-5.0f;
+            arr_goal_point[4] = next_pt_goal.x+5.0f;
+            arr_goal_point[5] = next_pt_goal.y-5.0f;
+
+            glBindBuffer(GL_ARRAY_BUFFER, goal_pt_vbo);
+            void *buf_ptr = glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+            memcpy(buf_ptr, arr_goal_point, 6 * sizeof(float));
+            glUnmapBuffer(GL_ARRAY_BUFFER);
+          }
+        }
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+
+    delete[] arr_goal_point;
     glfwTerminate();
 
     return 0;

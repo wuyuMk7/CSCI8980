@@ -21,7 +21,7 @@ public:
     {
         this->_bl = glm::vec3(tl.x, br.y, 0.0f);
         this->_tr = glm::vec3(br.x, tl.y, 0.0f);
-        this->init();        
+        this->init();
     };
     Rectangle (Shader &shader, glm::vec3 tl, glm::vec3 tr, glm::vec3 bl, glm::vec3 br) : 
         _shader(shader), _tl(tl), _tr(tr), _br(br), _bl(bl)
@@ -50,12 +50,21 @@ public:
     void rotateTo(const double angle) { _rotate = angle; };
     void scaleTo(const double new_scale) { _scale = new_scale; };
     void color(const glm::vec3 new_color) { _color = new_color; };
+
+    void reset(){
+      this->_tl = _otl;
+      this->_tr = _otr;
+      this->_bl = _obl;
+      this->_br = _obr;
+      this->_rotate = 0.0f;
+    }
 private:
     // Shader program
     Shader _shader;
 
     // Four vertices of a rectangle
     glm::vec3 _tl, _tr, _br, _bl;
+    glm::vec3 _otl, _otr, _obr, _obl;
     // Color of the rectangle
     glm::vec3 _color = glm::vec3(0.0f);
     // Angle
