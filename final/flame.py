@@ -122,7 +122,7 @@ class FLAME(nn.Module):
         # Static and Dynamic Landmark embeddings for FLAME
 
         with open(config.static_landmark_embedding_path, 'rb') as f:
-            static_embeddings = Struct(**pickle.load(f, encoding='latin1'))
+            static_embeddings = Struct(**pickle.load(f, encoding="latin1"))
 
         lmk_faces_idx = (static_embeddings.lmk_face_idx).astype(np.int64)
         self.register_buffer('lmk_faces_idx',
