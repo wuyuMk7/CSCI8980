@@ -78,7 +78,7 @@ class Ringnet(nn.Module):
     # expression_params = torch.tensor(params['expression'].reshape(1,50)).cuda()
     # pose_params = torch.tensor(params['pose'].reshape(1,6)).cuda()
     pose_params = x[:, 3:9] 
-    expression_params = x[:, 6:59]
+    expression_params = x[:, 9:59]
     shape_params = x[:, 59:159]
     print(shape_params.size())
     print(self.flame)
@@ -141,11 +141,11 @@ if __name__ == '__main__':
             sixRings.append(root + '/' + file)
       
       ringCount = len(sixRings)
-      # delete some images if we have more than 6
+      # delete some images if we have more than 5
       if (ringCount > ring_size_same_sbj):
         overSize = ringCount - ring_size_same_sbj
         jump = ringCount // overSize
-        for i in range(overSize-1):
+        for i in range(overSize):
           del sixRings[(overSize-1-i)*jump + jump // 2]
       elif (ringCount < ring_size_same_sbj):
         # we didn't have enough images for a ring

@@ -25,8 +25,9 @@ if __name__ == '__main__':
     expression_params = torch.tensor(params['expression'].reshape(1,50)).cuda()
     pose_params = torch.tensor(params['pose'].reshape(1,6)).cuda()
 
-    vs, landmarks = flame(shape_params, expression_params, pose_params)
-    print(vs.size(), landmarks.size())
+    print(shape_params.size())
+    # vs, landmarks = flame(shape_params, expression_params, pose_params)
+    # print(vs.size(), landmarks.size())
 
     # Forward Pass of FLAME, one can easily use this as a layer in a Deep learning Framework 
     vertices, landmark = flame(shape_params, expression_params, pose_params) # For RingNet project

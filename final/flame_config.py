@@ -13,7 +13,7 @@ parser.add_argument(
 parser.add_argument(
     '--static_landmark_embedding_path',
     type = str,
-    default = './flame_model/flame_static_embedding_new.pkl',
+    default = './flame_model/flame_static_embedding.pkl',
     help = 'Static landmark embeddings path for FLAME'
 )
 
@@ -87,7 +87,7 @@ parser.add_argument(
 parser.add_argument(
     '--batch_size',
     type = int,
-    default = 1,
+    default = 5,
     help = 'Training batch size.'
 )
 
