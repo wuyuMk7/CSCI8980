@@ -7,7 +7,6 @@ from torchvision import transforms
 from skimage import io
 from util import image as img_util
 
-
 class NoWDataset(Dataset):
     def __init__(self, dataset_path, data_folder, id_txt, R=6, transform=None):
         self.dataset_path = dataset_path
@@ -64,7 +63,7 @@ class NoWDataset(Dataset):
         # ]
         all_img_contents = [ io.imread(same_img_path) for same_img_path in same_img_paths]
         all_img_contents.append(io.imread(dif_img_path))
-        sample = { 'images': all_img_contents, 'target': 0.0 }
+        sample = { 'images': all_img_contents }
         
         if self.transform:
             sample = self.transform(sample)
@@ -88,8 +87,8 @@ class ScaleAndCrop(object):
             center = np.round(np.array(img.shape[:2]) / 2).astype(int)
             # image center in (x,y)
             center = center[::-1]
-            crop, proc_param = img_util.scale_and_crop(img, scale, center,
-                                                        config_img_size)
+            crop, proc_param = img_util.scale_and_crop(
+                img, scale, center, self.config_img_size)
             # import ipdb; ipdb.set_trace()
             # Normalize image to [-1, 1]
             # plt.imshow(crop/255.0)
@@ -97,7 +96,7 @@ class ScaleAndCrop(object):
             crop = 2 * ((crop / 255.) - 0.5)
             imgs_to_be_returned.append(crop)
         
-        return { 'images': imgs_to_be_returned, 'target': sample['target'] }
+        return { 'images': imgs_to_be_returned }
 
 class ToTensor(object):
     def __call__(self, sample):
@@ -107,7 +106,7 @@ class ToTensor(object):
         for img in imgs_to_be_processed:
             new_img = img.transpose((2, 0, 1))
             imgs_to_be_returned.append(new_img)
-        return { 'images': torch.tensor(imgs_to_be_returned), 'target': sample['target'] }
+        return { 'images': torch.tensor(imgs_to_be_returned) }
 
 if __name__ == '__main__':
     config_img_size = 224
