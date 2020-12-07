@@ -30,6 +30,14 @@ fc1_out_size = 512
 fc2_out_size = 512
 fc3_out_size = 159
 
+train_batch_size = 2
+shape_loss_eta = 0.5
+sc_loss_lambda = 1.0
+proj_loss_lambda = 60
+feat_loss_shape_lambda = 1e-4
+feat_loss_expression_lambda = 1e-4
+
+
 res_out_size = 2048
 fc1_size = 512
 fc2_size = 512
@@ -286,13 +294,13 @@ if __name__ == '__main__':
   # feature = resnet50(dataset[0]['images'][0].reshape(-1,3,224,224).float())
   # print(feature.shape)
 
-  NoWDataLoader = DataLoader(dataset=dataset, batch_size=2, shuffle=True, num_workers=1)
+  NoWDataLoader = DataLoader(dataset=dataset, batch_size=train_batch_size, shuffle=True, num_workers=1)
   for batch_idx, data_batched in enumerate(NoWDataLoader):
     cur_batch, cur_batch_shape = data_batched['images'], data_batched['images'].shape
     reshaped_batch = cur_batch.permute(1, 0, 2, 3, 4)
 
     # Output for each image in the ring
-    flame_outputs = []
+    regress_outputs, flame_vertices, flame_lmks = [], [], []
     for img_batch in reshaped_batch:
       # ResNet50 
       res_output = resnet50(img_batch.float())
@@ -305,24 +313,29 @@ if __name__ == '__main__':
         regress_input = torch.cat([res_output, regress_estimates], 1)
         regress_estimates = regression(regress_input)
       regress_output = regress_estimates
+      regress_outputs.append(regress_output)
 
       # FLAME model
       cam_params, pose_params = regress_output[0:, 0:3], regress_output[0:, 3:9]
       shape_params, exp_params = regress_output[0:, 9:109], regress_output[0:, 109:159]
       # print(cam_params.shape, pose_params.shape, shape_params.shape, exp_params.shape)
-      flame_output = flamelayer(shape_params, exp_params, pose_params)
-      print(flame_output)
-
-      exit(0)
+      flame_vert, flame_lmk = flamelayer(shape_params, exp_params, pose_params)
+      flame_vertices.append(flame_vert)
+      flame_lmks.append(flame_lmk)
     
     # SC Loss
-    dif_idx = len(regress_outputs_imgs) - 1
-    loss_sc = None 
-    for sc_loss_i in range(dif_idx - 1):
-      pass
-    exit(0)
-      
+    diff_idx = len(regress_outputs) - 1
+    loss_s = 0.0
+    for cur_i in range(diff_idx - 1):
+      for next_i in range(diff_idx - 1): 
+        if next_i == cur_i: 
+          continue
+        cur_same_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[next_i])
+        cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[diff_idx])
+        loss_s += max(0, cur_same_loss_s - cur_dif_loss_s + shape_loss_eta)
+    loss_sc = loss_s / (len(reshaped_batch) * ring_size)
 
+    exit(0)
     # Proj Loss
     loss_proj = 0.0
 
