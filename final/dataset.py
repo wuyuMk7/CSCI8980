@@ -52,8 +52,10 @@ class NoWDataset(Dataset):
             next_i = random.randint(random_sample_range[0], random_sample_range[1])
         # TODO: should not truncate if R is larger - should add empty images here
         # Now assume R is always valid
-        cur_R = self.R if len(self.all_imgs[cur_i]) > self.R else len(self.all_imgs[cur_i])
-        same_img_paths = random.sample(self.all_imgs[cur_i], cur_R)
+        # cur_R = self.R if len(self.all_imgs[cur_i]) > self.R else len(self.all_imgs[cur_i])
+        same_img_cnt = self.R-1 if len(self.all_imgs[cur_i]) >= self.R-1 else len(self.all_imgs[cur_i])
+        # same_img_paths = random.sample(self.all_imgs[cur_i], cur_R)
+        same_img_paths = random.sample(self.all_imgs[cur_i], same_img_cnt)
         dif_img_path = self.all_imgs[next_i][random.randint(0, len(self.all_imgs[next_i])-1)]
 
         # all_img_contents = [ R * same_imgs, dif_img]
