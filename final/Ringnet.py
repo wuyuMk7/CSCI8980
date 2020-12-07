@@ -28,6 +28,8 @@ fc3_out_size = 159
 ring_size = 6
 ring_size_same_sbj = ring_size - 1
 config_img_size = 224
+num_ief = 3
+delta = 0.1
 
 # class Identity(nn.Module):
 #   def __init__(self):
@@ -36,23 +38,24 @@ config_img_size = 224
 #   def forward(self, x):
 #     return x
 
-# class Regression(nn.Module):
-#   def __init__(self):
-#     super().__init__()
-#     self.fc1 = nn.Linear(res_out_size, fc1_out_size, bias=True)
-#     self.relu1 = nn.ReLU()
-#     self.dropout1 = nn.Dropout(p=0.2)
+class Regression(nn.Module):
+  def __init__(self):
+    super(Regression, self).__init__()
+    self.fc1 = nn.Linear(res_out_size + fc3_out_size, fc1_out_size, bias=True)
+    self.relu1 = nn.ReLU()
+    self.dropout1 = nn.Dropout(p=0.2)
 
-#     self.fc2 = nn.Linear(fc1_out_size, fc2_out_size, bias=True)
-#     self.relu2 = nn.ReLU()
-#     self.dropout2 = nn.Dropout(p=0.2)
+    self.fc2 = nn.Linear(fc1_out_size, fc2_out_size, bias=True)
+    self.relu2 = nn.ReLU()
+    self.dropout2 = nn.Dropout(p=0.2)
 
-#     self.fc3 = nn.Linear(fc2_out_size, fc3_out_size, bias=True)
+    self.fc3 = nn.Linear(fc2_out_size, fc3_out_size, bias=True)
   
-#   def forward(self, x):
-#     x = self.dropout1(self.relu1(self.fc1(x)))
-#     x = self.dropout2(self.relu2(self.fc2(x)))
-#     x = self.fc3(x)
+  def forward(self, x):
+    x = self.dropout1(self.relu1(self.fc1(x)))
+    x = self.dropout2(self.relu2(self.fc2(x)))
+    x = self.fc3(x)
+    return x
 
 # class FlameLayer(nn.Module):
 #   def __init__(self, **kwargs):
@@ -63,23 +66,37 @@ config_img_size = 224
 class Ringnet(nn.Module):
   def __init__(self, resnet, flame):
     super(Ringnet, self).__init__()
+    # encode
+    # feature detection
     self.resnet = resnet
-    self.fc1 = nn.Linear(res_out_size, fc1_out_size, bias=True)
-    self.fc2 = nn.Linear(fc1_out_size, fc2_out_size, bias=True)
-    self.fc3 = nn.Linear(fc2_out_size, fc3_out_size, bias=True)
+    # regression
+    # self.fc1 = nn.Linear(res_out_size, fc1_out_size, bias=True)
+    # self.fc2 = nn.Linear(fc1_out_size, fc2_out_size, bias=True)
+    # self.fc3 = nn.Linear(fc2_out_size, fc3_out_size, bias=True)
+    self.regression = Regression()
+    # decode
     self.flame = flame
   def forward(self, x):
-    x = self.resnet(x)
-    print(x.size())
-    x = F.dropout(F.relu(self.fc1(x)), p=0.2)
-    x = F.dropout(F.relu(self.fc2(x)), p=0.2)
-    x = self.fc3(x)
+    inputReg = self.resnet(x)
+
+    # IEF
+    out = torch.zeros(ring_size_same_sbj, fc3_out_size).cuda()
+    for i in range(num_ief):
+      input = torch.cat((inputReg, out), 1)
+      # if (i == 0):
+      # else:
+      #   input = torch.cat(inputReg, out)
+      outNew = self.regression(input)
+      if i == 0:
+        out = outNew
+      else:
+        out = out + delta * outNew
     # shape_params = torch.tensor(params['shape'].reshape(1,100)).cuda()
     # expression_params = torch.tensor(params['expression'].reshape(1,50)).cuda()
     # pose_params = torch.tensor(params['pose'].reshape(1,6)).cuda()
-    pose_params = x[:, 3:9] 
-    expression_params = x[:, 9:59]
-    shape_params = x[:, 59:159]
+    pose_params = out[:, 3:9] 
+    expression_params = out[:, 9:59]
+    shape_params = out[:, 59:159]
     print(shape_params.size())
     print(self.flame)
     vertices, landmarks = self.flame(shape_params, expression_params, pose_params)
@@ -161,7 +178,7 @@ if __name__ == '__main__':
       imgs = np.array(imgs)
       imgs = torch.Tensor(imgs)
       imgs = imgs.cuda()
-      vertices, flame_parameters = ring.forward(imgs)
+      vertices = ring.forward(imgs)
 
     # use open pose to get their landmarks
 
