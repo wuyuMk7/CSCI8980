@@ -309,9 +309,9 @@ if __name__ == '__main__':
       # FLAME model
       cam_params, pose_params = regress_output[0:, 0:3], regress_output[0:, 3:9]
       shape_params, exp_params = regress_output[0:, 9:109], regress_output[0:, 109:159]
-      print(cam_params.shape, pose_params.shape, shape_params.shape, exp_params.shape)
+      # print(cam_params.shape, pose_params.shape, shape_params.shape, exp_params.shape)
       flame_output = flamelayer(shape_params, exp_params, pose_params)
-      print(flame_output.shape)
+      print(flame_output)
 
       exit(0)
     
