@@ -1,6 +1,8 @@
 import urllib
 from PIL import Image
 import numpy as np
+from numpy.core.defchararray import count
+from numpy.core.fromnumeric import size
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,6 +21,12 @@ import random, os
 import matplotlib.pyplot as plt
 from dataset import NoWDataset, ScaleAndCrop, ToTensor
 from torch.utils.data import DataLoader
+import sys
+dir_path = os.getcwd()
+sys.path.append(dir_path + r"\openpose\build\python\openpose\Release")
+os.environ['PATH']  = os.environ['PATH'] + dir_path + r"\openpose\build\x64\Release;" +  dir_path + r"\openpose\build\bin"
+# print(os.environ['PATH'])
+import pyopenpose
 
 dev = "cpu"
 if torch.cuda.is_available():  
@@ -274,6 +282,7 @@ if __name__ == '__main__':
   dataset = NoWDataset(
     dataset_path = os.path.join('.', 'training_set', 'NoW_Dataset', 'final_release_version'), 
     data_folder = 'iphone_pictures',
+    facepos_folder= 'openpose',
     id_txt = 'subjects_idst.txt',
     R = 6,
     transform = composed_transforms
@@ -297,10 +306,15 @@ if __name__ == '__main__':
   NoWDataLoader = DataLoader(dataset=dataset, batch_size=train_batch_size, shuffle=True, num_workers=1)
   for batch_idx, data_batched in enumerate(NoWDataLoader):
     cur_batch, cur_batch_shape = data_batched['images'], data_batched['images'].shape
+    cur_facepos = data_batched['faceposes']
     reshaped_batch = cur_batch.permute(1, 0, 2, 3, 4)
+    # reshaped_facepos = cur_facepos.permute(1, 0, 2, 3, 4)
+    print(cur_facepos.size())
+    # print(reshaped_facepos.size())
 
     # Output for each image in the ring
     regress_outputs, flame_vertices, flame_lmks = [], [], []
+    # print(reshaped_batch.size())
     for img_batch in reshaped_batch:
       # ResNet50 
       res_output = resnet50(img_batch.float())
@@ -335,10 +349,18 @@ if __name__ == '__main__':
         loss_s += max(0, cur_same_loss_s - cur_dif_loss_s + shape_loss_eta)
     loss_sc = loss_s / (len(reshaped_batch) * ring_size)
 
-    exit(0)
+    # exit(0)
     # Proj Loss
     loss_proj = 0.0
+    # first get the landmarks
+    # cur_facepos
+    kp = flame_lmks
+    w = (cur_facepos[:,:,:,:,2]>0.41).float()
+    k = cur_facepos[:,:,:,:,:2]
+    lproj = F.l1_loss(k, kp, "mean")
 
+
+    exit(0)
     # Total Loss
     loss_tot = 0.0
 

@@ -1,6 +1,8 @@
 import os, random
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy.core.fromnumeric import size
+from numpy.lib.function_base import _diff_dispatcher
 import torch
 from torch.utils.data import Dataset
 from torchvision import transforms
@@ -8,9 +10,10 @@ from skimage import io
 from util import image as img_util
 
 class NoWDataset(Dataset):
-    def __init__(self, dataset_path, data_folder, id_txt, R=6, transform=None):
+    def __init__(self, dataset_path, data_folder, facepos_folder, id_txt, R=6, transform=None):
         self.dataset_path = dataset_path
         self.data_folder = data_folder
+        self.facepos_folder = facepos_folder
         self.id_txt = id_txt
         self.R = R
         self.transform = transform
@@ -63,8 +66,8 @@ class NoWDataset(Dataset):
         #     [ io.imread(same_img_path) for same_img_path in same_img_paths ],
         #     [ io.imread(dif_img_path) ]
         # ]
-        all_img_contents = [ io.imread(same_img_path) for same_img_path in same_img_paths]
-        all_img_contents.append(io.imread(dif_img_path))
+        all_img_contents = [ {"image": io.imread(same_img_path), "openpose": np.load(same_img_path.replace(self.data_folder, self.facepos_folder).replace("jpg", "npy"), allow_pickle=True, encoding='latin1')} for same_img_path in same_img_paths]
+        all_img_contents.append({"image": io.imread(dif_img_path),"openpose": np.load(dif_img_path.replace(self.data_folder, self.facepos_folder).replace("jpg", "npy"), allow_pickle=True, encoding='latin1')})
         sample = { 'images': all_img_contents }
         
         if self.transform:
@@ -80,9 +83,11 @@ class ScaleAndCrop(object):
         imgs_to_be_processed = sample['images']
         
         imgs_to_be_returned = []
-        for img in imgs_to_be_processed:
+        faceposes_to_be_returned = []
+        for img_facepos in imgs_to_be_processed:
+            img = img_facepos['image']
             if np.max(img.shape[:2]) != self.config_img_size:
-                print('Resizing so the max image size is %d..' % self.config_img_size)
+                # print('Resizing so the max image size is %d..' % self.config_img_size)
                 scale = (float(self.config_img_size) / np.max(img.shape[:2]))
             else:
                 scale = 1.0#scaling_factor
@@ -96,19 +101,30 @@ class ScaleAndCrop(object):
             # plt.imshow(crop/255.0)
             # plt.show()
             crop = 2 * ((crop / 255.) - 0.5)
+            faceposes_to_be_returned.append(img_facepos['openpose'])
             imgs_to_be_returned.append(crop)
         
-        return { 'images': imgs_to_be_returned }
+        return { 'images': imgs_to_be_returned , 'faceposes': faceposes_to_be_returned}
 
 class ToTensor(object):
     def __call__(self, sample):
         imgs_to_be_processed = sample['images']
+        faceposes_to_be_processed = np.array(sample['faceposes'])
         
         imgs_to_be_returned = []
+        # faceposes_to_be_returned = []
         for img in imgs_to_be_processed:
             new_img = img.transpose((2, 0, 1))
             imgs_to_be_returned.append(new_img)
-        return { 'images': torch.tensor(imgs_to_be_returned) }
+        # for facepos in faceposes_to_be_processed:
+        #     new_facepos = [facepos.item()['top'], facepos.item()['left'], facepos.item()['right'], facepos.item()['bottom']]
+        #     faceposes_to_be_returned.append(np.array(new_facepos))
+        # np.array(faceposes_to_be_returned)
+        faceposes = torch.tensor(faceposes_to_be_processed)
+        print(faceposes.size())
+        imgs_to_be_returned = torch.tensor(imgs_to_be_returned)
+        print(imgs_to_be_returned.size())
+        return { 'images': imgs_to_be_returned, 'faceposes' :faceposes[:, :, :68, :]}
 
 if __name__ == '__main__':
     config_img_size = 224
