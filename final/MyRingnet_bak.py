@@ -286,13 +286,40 @@ def preprocess_image(img_path):
 #     #   vertices, flame_parameters = ring.forward(imgs)
 
 
-def train(
-  dataloader, resnet50, regression, flamelayer, 
-  optimizer_reg, optimizer_res, device=None):
 
-  NoWDataLoader = dataloader
+if __name__ == '__main__':
+  composed_transforms = transforms.Compose([ ScaleAndCrop(config_img_size), ToTensor() ])
+  dataset = NoWDataset(
+    dataset_path = os.path.join('.', 'training_set', 'NoW_Dataset', 'final_release_version'), 
+    data_folder = 'iphone_pictures',
+    facepos_folder= 'openpose',
+    id_txt = 'subjects_idst.txt',
+    R = 6,
+    transform = composed_transforms
+  )
+
+  resnet50 = models.resnet50(pretrained=True)
+  resnet50.fc = Identity()
+  regression = Regression()
+  config = get_config()
+  flamelayer = FLAME(config)
+
+  ringnet = SingleRingnet(resnet50, regression, flamelayer)
+  # print(ringnet)
+
+  optimizer_reg = torch.optim.Adam(regression.parameters(), lr=learning_rate)
+  optimizer_res = torch.optim.Adam(resnet50.parameters(), lr=learning_rate)
+  scheduler_reg = torch.optim.lr_scheduler.StepLR(optimizer_reg, step_size=5)
+  scheduler_res = torch.optim.lr_scheduler.StepLR(optimizer_res, step_size=5)
+
+  # img = dataset[0]['images'][0].permute(1,2,0).numpy()
+  # img = dataset[0]['images'][0].permute(1,2,0)
+  # print(img)
+  # feature = resnet50(dataset[0]['images'][0].reshape(-1,3,224,224).float())
+  # print(feature.shape)
+
+  NoWDataLoader = DataLoader(dataset=dataset, batch_size=train_batch_size, shuffle=True, num_workers=1)
   for batch_idx, data_batched in enumerate(NoWDataLoader):
-    # print(batch_idx, data_batched['images'].shape)
     cur_batch, cur_batch_shape = data_batched['images'], data_batched['images'].shape
     cur_facepos = data_batched['faceposes']
     reshaped_batch = cur_batch.permute(1, 0, 2, 3, 4)
@@ -322,7 +349,7 @@ def train(
       # FLAME model
       cam_params, pose_params = regress_output[0:, 0:3], regress_output[0:, 3:9]
       shape_params, exp_params = regress_output[0:, 9:109], regress_output[0:, 109:159]
-      #print(cam_params.shape, pose_params.shape, shape_params.shape, exp_params.shape)
+      # print(cam_params.shape, pose_params.shape, shape_params.shape, exp_params.shape)
       flame_vert, flame_lmk = flamelayer(shape_params, exp_params, pose_params)
       flame_vertices.append(flame_vert)
       # flame_lmks.append(flame_lmk)
@@ -379,52 +406,23 @@ def train(
     loss_tot = sc_loss_lambda * loss_sc + proj_loss_lambda * loss_proj
     loss_tot += feat_loss_shape_lambda * shape_norms
     loss_tot += feat_loss_expression_lambda * exp_norms
-    print(batch_idx, loss_tot)
+
     optimizer_reg.zero_grad()
     optimizer_res.zero_grad()
     loss_tot.backward()
     optimizer_reg.step()
     optimizer_res.step()
 
+    exit(0)
+
+# train_batch_size = 2
+# shape_loss_eta = 0.5
+# sc_loss_lambda = 1.0
+# proj_loss_lambda = 60
+# feat_loss_shape_lambda = 1e-4
+# feat_loss_expression_lambda = 1e-4
 
 
-if __name__ == '__main__':
-  composed_transforms = transforms.Compose([ ScaleAndCrop(config_img_size), ToTensor() ])
-  dataset = NoWDataset(
-    dataset_path = os.path.join('.', 'training_set', 'NoW_Dataset', 'final_release_version'), 
-    data_folder = 'iphone_pictures',
-    facepos_folder= 'openpose',
-    id_txt = 'subjects_idst.txt',
-    R = 6,
-    transform = composed_transforms
-  )
-
-  resnet50 = models.resnet50(pretrained=True)
-  resnet50.fc = Identity()
-  regression = Regression()
-  config = get_config()
-  flamelayer = FLAME(config)
-
-  ringnet = SingleRingnet(resnet50, regression, flamelayer)
-  # print(ringnet)
-
-  optimizer_reg = torch.optim.Adam(regression.parameters(), lr=learning_rate)
-  optimizer_res = torch.optim.Adam(resnet50.parameters(), lr=learning_rate)
-  scheduler_reg = torch.optim.lr_scheduler.StepLR(optimizer_reg, step_size=5)
-  scheduler_res = torch.optim.lr_scheduler.StepLR(optimizer_res, step_size=5)
-
-  # img = dataset[0]['images'][0].permute(1,2,0).numpy()
-  # img = dataset[0]['images'][0].permute(1,2,0)
-  # print(img)
-  # feature = resnet50(dataset[0]['images'][0].reshape(-1,3,224,224).float())
-  # print(feature.shape)
-
-  NoWDataLoader = DataLoader(dataset=dataset, batch_size=train_batch_size, shuffle=True, num_workers=1)
-  
-  for epoch_idx in range(epochs):
-    print("Epoch: {}".format(epoch_idx))
-    train(NoWDataLoader, resnet50, regression, flamelayer, optimizer_reg, optimizer_res)
-  
     # print(cur_batch_shape, reshaped_batch[0].shape)
     # plt.imshow(reshaped_batch[0][0].permute(1,2,0).numpy())
     # plt.show()
