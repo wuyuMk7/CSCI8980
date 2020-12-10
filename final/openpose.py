@@ -122,13 +122,13 @@ for id in ids:
                 # print("Face keypoints: \n" + str(datum.faceKeypoints))
 
                 # save openpose data
-                rootForFacepos = root.replace('iphone_pictures', 'openpose')
-                if not isdir(rootForFacepos):
-                    os.makedirs(rootForFacepos)
-                fileForFacepos = file.replace('jpg', 'npy')
-                fileSave = rootForFacepos + '/' + fileForFacepos
-                np.save(fileSave, datum.faceKeypoints)
-                # imS = cv2.resize(datum.cvOutputData, (960, 540)) 
-                # cv2.imshow("OpenPose 1.7.0 - Tutorial Python API", imS)
-                # cv2.waitKey(0)
+                # rootForFacepos = root.replace('iphone_pictures', 'openpose')
+                # if not isdir(rootForFacepos):
+                #     os.makedirs(rootForFacepos)
+                # fileForFacepos = file.replace('jpg', 'npy')
+                # fileSave = rootForFacepos + '/' + fileForFacepos
+                # np.save(fileSave, datum.faceKeypoints)
+                imS = cv2.resize(datum.cvOutputData, (540, 960)) 
+                cv2.imshow("OpenPose 1.7.0 - Tutorial Python API", imS)
+                cv2.waitKey(0)
 
