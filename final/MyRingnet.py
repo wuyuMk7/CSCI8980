@@ -244,7 +244,11 @@ def train(
         # cur_same_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[next_i])
         # cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[diff_idx])
         cur_same_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[next_i])
-        cur_dif_losedsx7o0loss_sc = loss_s / ring_size
+        cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[diff_idx])
+        loss_s += max(0, cur_same_loss_s - cur_dif_loss_s + shape_loss_eta)
+    # TODO: Change the scaler!!!! It's wrong!!! - Can add average=False to loss !!!
+    loss_sc = loss_s / (len(reshaped_batch) * ring_size)
+    # loss_sc = loss_s / ring_size
 
     # Proj Loss
     loss_proj = 0.0
