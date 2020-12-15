@@ -58,7 +58,7 @@ parser.add_argument(
 
 parser.add_argument(
     '--use_3D_translation',
-    default = True, # Flase for RingNet project
+    default = False, # Flase for RingNet project
     type = bool,
     help = 'If true apply the landmark loss on also on the face contour.'
 )
@@ -87,7 +87,7 @@ parser.add_argument(
 parser.add_argument(
     '--batch_size',
     type = int,
-    default = 2,
+    default = 10,
     help = 'Training batch size.'
 )
 

@@ -1,3 +1,5 @@
 .DS_Store
 /final/training_set/Now_Dataset
 /final/openpose/
+/final/model.pkl
+/final/resnet50.pkl

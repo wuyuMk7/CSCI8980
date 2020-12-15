@@ -84,6 +84,9 @@ class ScaleAndCrop(object):
         
         imgs_to_be_returned = []
         faceposes_to_be_returned = []
+        img_shapes = []
+        scales = [] # the 224 / the actual size of img, 2 x 1
+        centers = []  # the center of the picture
         for img_facepos in imgs_to_be_processed:
             img = img_facepos['image']
             if np.max(img.shape[:2]) != self.config_img_size:
@@ -101,15 +104,24 @@ class ScaleAndCrop(object):
             # plt.imshow(crop/255.0)
             # plt.show()
             crop = 2 * ((crop / 255.) - 0.5)
-            faceposes_to_be_returned.append(img_facepos['openpose'])
+            single_facepos = img_facepos['openpose']
+            # single_facepos *= scale
+            faceposes_to_be_returned.append(single_facepos)
             imgs_to_be_returned.append(crop)
+            img_shapes.append(np.array([[float(img.shape[0]), 0.],[0., float(img.shape[1])]]))
+            scales.append(scale)
+            centers.append(center)
+
         
-        return { 'images': imgs_to_be_returned , 'faceposes': faceposes_to_be_returned}
+        return { 'images': imgs_to_be_returned , 'faceposes': faceposes_to_be_returned, 'shape': img_shapes, 'scale': scales, 'centers': centers}
 
 class ToTensor(object):
     def __call__(self, sample):
         imgs_to_be_processed = sample['images']
         faceposes_to_be_processed = np.array(sample['faceposes'])
+        img_shapes = np.array(sample['shape'])
+        scales = np.array(sample['scale'])
+        centers = np.array(sample['centers'])
         
         imgs_to_be_returned = []
         # faceposes_to_be_returned = []
@@ -121,10 +133,13 @@ class ToTensor(object):
         #     faceposes_to_be_returned.append(np.array(new_facepos))
         # np.array(faceposes_to_be_returned)
         faceposes = torch.tensor(faceposes_to_be_processed)
-        print(faceposes.size())
+        # print(faceposes.size())
         imgs_to_be_returned = torch.tensor(imgs_to_be_returned)
-        print(imgs_to_be_returned.size())
-        return { 'images': imgs_to_be_returned, 'faceposes' :faceposes[:, :, :68, :]}
+        img_shapes = torch.tensor(img_shapes)
+        scales = torch.tensor(scales)
+        centers = torch.tensor(centers)
+        # print(imgs_to_be_returned.size())
+        return { 'images': imgs_to_be_returned, 'faceposes' :faceposes[:, :, :68, :], 'shapes': img_shapes, 'scales': scales, 'centers':centers}
 
 if __name__ == '__main__':
     config_img_size = 224
@@ -132,7 +147,7 @@ if __name__ == '__main__':
     dataset = NoWDataset(
         dataset_path = os.path.join('.', 'training_set', 'NoW_Dataset', 'final_release_version'), 
         data_folder = 'iphone_pictures',
-        id_txt = 'subjects_idst.txt',
+        id_txt = 'subjects_id.txt',
         R = 6,
         transform = composed_transforms
     )
