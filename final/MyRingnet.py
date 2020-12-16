@@ -4,6 +4,7 @@ from PIL import Image
 import numpy as np
 from numpy.core.defchararray import count
 from numpy.core.fromnumeric import size, transpose
+from numpy.lib.function_base import average
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -33,7 +34,7 @@ import trimesh
 # # print(os.environ['PATH'])
 # import pyopenpose
 
-torch.set_printoptions(precision=sys.maxsize)
+# torch.set_printoptions(precision=sys.maxsize)
 dev = "cpu"
 # if torch.cuda.is_available():  
 #   dev = "cuda:0"   
@@ -44,9 +45,9 @@ fc1_out_size = 512
 fc2_out_size = 512
 fc3_out_size = 159
 
-train_batch_size = 10
+train_batch_size = 1
 learning_rate = 1e-4
-epochs = 3
+epochs = 6
 decay = 0.1
 shape_loss_eta = 0.5
 sc_loss_lambda = 1.0
@@ -227,7 +228,7 @@ def train(
       cam_params = transform_cam(cam_params, undo_scales_batch, config_img_size, centers_batch)
       flame_proj_lmk = project_points(flame_lmk, cam_params)
       flame_proj_lmks.append(flame_proj_lmk)
-      print(shape_params)
+      # print(shape_params)
       shape_norms += torch.square(torch.norm(shape_params))
       exp_norms += torch.square(torch.norm(exp_params))
     # print("norms" + str(shape_norms))
@@ -243,8 +244,8 @@ def train(
           continue
         # cur_same_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[next_i])
         # cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[diff_idx])
-        cur_same_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[next_i])
-        cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[diff_idx])
+        cur_same_loss_s = F.mse_loss(regress_outputs[cur_i][3:], regress_outputs[next_i][3:])
+        cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i][3:], regress_outputs[diff_idx][3:])
         loss_s += max(0, cur_same_loss_s - cur_dif_loss_s + shape_loss_eta)
     # TODO: Change the scaler!!!! It's wrong!!! - Can add average=False to loss !!!
     loss_sc = loss_s / (len(reshaped_batch) * ring_size)
@@ -259,24 +260,41 @@ def train(
       flame_proj_lmk, reshaped_facepos, img_shapes = flame_proj_lmks[img_idx].cuda(), reshaped_faceposes[img_idx].cuda(), reshaped_img_shapes[img_idx].cuda()
       # flame_proj_lmk, reshaped_facepos, img_shapes = flame_proj_lmks[img_idx], reshaped_faceposes[img_idx], reshaped_img_shapes[img_idx]
       ground_truth_weights = ((reshaped_facepos[:,:,:,2] > 0.41).float()).reshape(-1, 68)
+      # print(ground_truth_weights)
       ground_truth_lmk = (reshaped_facepos[:,:,:,:2]).reshape(-1, 68, 2)
       #print(ground_truth_weights)
       ground_truth_weights = ground_truth_weights.unsqueeze(2)
       ground_truth_weights = torch.cat([ground_truth_weights, ground_truth_weights], 2).cuda()
 
+      # 
+      scale_cpu = reshaped_scales[img_idx].cuda()
+      input = (ground_truth_weights * flame_proj_lmk).permute(1,2,0) * scale_cpu
+      ground_truth = (ground_truth_weights * ground_truth_lmk).permute(1,2,0) * scale_cpu
+      input = input.permute(2,0,1)
+      ground_truth = ground_truth.permute(2,0,1)
+      # print(input)
+      # print(ground_truth)
       loss_p = F.l1_loss(
         # size_average=False,
-        input=ground_truth_weights * flame_proj_lmk,
-        target=ground_truth_weights * ground_truth_lmk
+        input = input,
+        target = ground_truth
       )
-      loss_proj += loss_p
-    loss_proj = loss_proj / (len(reshaped_batch) * 68)
+      # print(scale_cpu)
+      # print(config_img_size)
+      # print(loss_p)
+      loss_proj += loss_p / (config_img_size)
+      # print(loss_proj)
+    loss_proj = loss_proj / (len(reshaped_batch))
 
     # Total Loss
-    loss_tot = sc_loss_lambda * loss_sc + proj_loss_lambda * loss_proj
+    sc_part = sc_loss_lambda * loss_sc 
+    proj_part = proj_loss_lambda * loss_proj
     # loss_tot = 0.0
-    loss_tot += feat_loss_shape_lambda * shape_norms
-    loss_tot += feat_loss_expression_lambda * exp_norms
+    shape_part = feat_loss_shape_lambda * shape_norms
+    exp_part = feat_loss_expression_lambda * exp_norms
+    # loss_tot = sc_part + proj_part + shape_part + exp_part
+    loss_tot = proj_part
+    print("sc: " + str(sc_part) + " proj: " + str(proj_part) + " shape: " + str(shape_part) + " exp: " + str(exp_part))
     print(batch_idx, loss_tot)
     optimizer_reg.zero_grad()
     optimizer_res.zero_grad()
@@ -307,6 +325,17 @@ def evaluate(resnet50, regression, flamelayer, dataloader):
     for img_batch in reshaped_batch:
       # ResNet50 
       # res_output = resnet50(img_batch.float())
+      res_output = resnet50(img_batch.float().cuda())
+
+      # Empty estimates as the initial value for concatenation
+      regress_estimates = torch.zeros([ res_output.shape[0], regress_out_size ]).cuda()
+      # Regression model
+      for _ in range(regress_iteration_cnt):
+        # Preprocess regression input - concatenation
+        regress_input = torch.cat([res_output, regress_estimates], 1)
+        regress_estimates = regression(regress_input)
+      regress_output = regress_estimates
+      regress_outputs.append(regress_output)
 
       # FLAME model
       cam_params, pose_params = regress_output[0:, 0:3], regress_output[0:, 3:9]
@@ -340,6 +369,8 @@ def evaluate(resnet50, regression, flamelayer, dataloader):
       tfs[:, :3, 3] = joints
       joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
       scene.add(joints_pcl)
+      scale = cam_params[0, 0]
+      oc = pyrender.OrthographicCamera(scale, scale)
       pyrender.Viewer(scene, use_raymond_lighting=True)
 
 
@@ -354,13 +385,13 @@ def weight_init(m):
     nn.init.xavier_normal_(m.weight)
 
 if __name__ == '__main__':
-  need_evaluate = True
+  need_evaluate = False
   composed_transforms = transforms.Compose([ ScaleAndCrop(config_img_size), ToTensor() ])
   dataset = NoWDataset(
     dataset_path = os.path.join('.', 'training_set', 'NoW_Dataset', 'final_release_version'), 
     data_folder = 'iphone_pictures',
     facepos_folder= 'openpose',
-    id_txt = 'subjects_id.txt',
+    id_txt = 'subjects_idst.txt',
     R = 6,
     transform = composed_transforms
   )

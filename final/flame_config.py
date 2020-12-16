@@ -87,7 +87,7 @@ parser.add_argument(
 parser.add_argument(
     '--batch_size',
     type = int,
-    default = 10,
+    default = 1,
     help = 'Training batch size.'
 )
 
