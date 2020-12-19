@@ -46,8 +46,8 @@ fc2_out_size = 512
 fc3_out_size = 159
 
 train_batch_size = 1
-learning_rate = 1e-4
-epochs = 6
+learning_rate = 2e-4
+epochs = 24
 decay = 0.1
 shape_loss_eta = 0.5
 sc_loss_lambda = 1.0
@@ -76,19 +76,45 @@ def project_points(lmks, camera):
   # lmks_tmp = cam[:, :, 0] * (lmks_trans.reshape([shape[0], -1]))
   # result = lmks_tmp.reshape(shape)
   # lmks_trans = torch.zeros((lmks.size()[0], lmks.size()[1], lmks.size()[2] - 1))
-  temp = camera[:, 0] * lmks[:, :, :2].permute(1, 2, 0)
-  temp = temp.permute(0, 2, 1)
+
+  #print(lmks) 
+  #print(camera.shape)
+  #print(torch.index_select(lmks, 2, torch.LongTensor([1,2]).cuda()))
+
+  lmks_xz = torch.index_select(lmks, 2, torch.LongTensor([0, 2]).cuda())
+  #print(lmks_xz)
+  #print(camera)
+  temp = camera[:, 0] * lmks_xz
+  #print(temp)
+  #temp = temp[]
+
+  #temp = camera[:, 0] * lmks[:, :, :2].permute(1, 2, 0)
+  #temp = temp.permute(0, 2, 1)
+  #print(temp.shape, temp)
+
   temp += camera[:, 1:]
-  result = temp.permute(1, 0, 2)
-  return result
+  #print(temp)
+  #result = temp.permute(1, 0, 2)
+  #exit(0)
+  #return result
+  return temp
 
 '''
 Used to turn the translation part of the cam according to the img size
 '''
 def transform_cam(cam, undo_scale, config_img_size, center):
-  temp = cam.permute(1, 0) * undo_scale * config_img_size
-  temp[1:, :] += center.permute(1, 0)
-  temp = temp.permute(1, 0)
+  #print(cam, undo_scale, config_img_size)
+  #temp = cam.permute(1, 0) * undo_scale * config_img_size
+  #print(temp, center)
+  #temp[1:, :] += center.permute(1, 0)
+  #print(temp)
+  #temp = temp.permute(1, 0)
+  #print(temp)
+  #exit(0)
+
+  temp = cam * undo_scale * config_img_size
+  temp[:,0]+=center[:,0]
+  temp[:,2]+=center[:,1]
   return temp
 
 
@@ -122,6 +148,8 @@ class Regression(nn.Module):
   def forward(self, x):
     x = self.dropout1(self.relu1(self.fc1(x)))
     x = self.dropout2(self.relu2(self.fc2(x)))
+    #x = (self.relu1(self.fc1(x)))
+    #x = (self.relu2(self.fc2(x)))
     # x = self.relu1(self.fc1(x))
     # x = self.relu2(self.fc2(x))
     x = self.fc3(x)
@@ -210,6 +238,9 @@ def train(
       regress_output = regress_estimates
       regress_outputs.append(regress_output)
 
+      #print(regress_output.shape)
+      #exit(0)
+
       # FLAME model
       cam_params, pose_params = regress_output[0:, 0:3], regress_output[0:, 3:9]
       shape_params, exp_params = regress_output[0:, 9:109], regress_output[0:, 109:159]
@@ -234,9 +265,15 @@ def train(
     # print("norms" + str(shape_norms))
     shape_norms = shape_norms / float(len(reshaped_batch))
     exp_norms = exp_norms / float(len(reshaped_batch))
+
+
+    #exit(0)
+
+
     
     # SC Loss
     diff_idx = len(regress_outputs) - 1
+    #print(len(regress_outputs), diff_idx)
     loss_s = 0.0
     for cur_i in range(diff_idx):
       for next_i in range(diff_idx): 
@@ -244,11 +281,22 @@ def train(
           continue
         # cur_same_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[next_i])
         # cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[diff_idx])
-        cur_same_loss_s = F.mse_loss(regress_outputs[cur_i][3:], regress_outputs[next_i][3:])
-        cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i][3:], regress_outputs[diff_idx][3:])
+        #print(regress_outputs[cur_i][:,3:].shape)
+        #exit(0)
+        # print(cur_i, next_i, regress_outputs[cur_i])
+        cur_same_loss_s = F.mse_loss(regress_outputs[cur_i][:, 9:109], regress_outputs[next_i][:, 9:109])
+        cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i][:, 9:109], regress_outputs[diff_idx][:, 9:109])
+        #print(cur_dif_loss_s)
+
+        #cur_same_loss_s = F.mse_loss(regress_outputs[cur_i][3:], regress_outputs[next_i][3:])
+        #cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i][3:], regress_outputs[diff_idx][3:])
         loss_s += max(0, cur_same_loss_s - cur_dif_loss_s + shape_loss_eta)
+        # print(cur_same_loss_s - cur_dif_loss_s)
+        #print(cur_i, next_i, loss_s)
+        #print(cur_same_loss_s, cur_dif_loss_s, shape_loss_eta, loss_s)
     # TODO: Change the scaler!!!! It's wrong!!! - Can add average=False to loss !!!
     loss_sc = loss_s / (len(reshaped_batch) * ring_size)
+    #exit(0)
     # loss_sc = loss_s / ring_size
 
     # Proj Loss
@@ -390,8 +438,10 @@ if __name__ == '__main__':
   dataset = NoWDataset(
     dataset_path = os.path.join('.', 'training_set', 'NoW_Dataset', 'final_release_version'), 
     data_folder = 'iphone_pictures',
+    bounding_box_folder = 'detected_face',
     facepos_folder= 'openpose',
-    id_txt = 'subjects_idst.txt',
+    # id_txt = 'subjects_idst.txt',
+    id_txt = 'subjects_id.txt',
     R = 6,
     transform = composed_transforms
   )
@@ -427,7 +477,7 @@ if __name__ == '__main__':
   # feature = resnet50(dataset[0]['images'][0].reshape(-1,3,224,224).float())
   # print(feature.shape)
 
-  NoWDataLoader = DataLoader(dataset=dataset, batch_size=train_batch_size, shuffle=True, num_workers=1)
+  NoWDataLoader = DataLoader(dataset=dataset, batch_size=train_batch_size, shuffle=True, num_workers=16)
   
   if need_evaluate:
     evaluate(resnet50, regression, flamelayer, NoWDataLoader)

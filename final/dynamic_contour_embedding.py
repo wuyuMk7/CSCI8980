@@ -101,7 +101,8 @@ if __name__ == '__main__':
     if angle < 0:
         angle = 39 - angle
     contour_embeddings_path = './flame_model/flame_dynamic_embedding.npy'
-    static_embedding_path = './flame_model/flame_static_embedding_new.pkl'
+    # static_embedding_path = './flame_model/flame_static_embedding_new.pkl'
+    static_embedding_path = './flame_model/flame_static_embedding.pkl'
     # load_dynamic_contour(template_flame_path='./flame_model/000001.obj', contour_embeddings_path=contour_embeddings_path, static_embedding_path=static_embedding_path, angle=int(angle))
 
     template_mesh = trimesh.load_mesh('./test_data/mesh/000001.obj')

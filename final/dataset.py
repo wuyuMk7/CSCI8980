@@ -10,9 +10,10 @@ from skimage import io
 from util import image as img_util
 
 class NoWDataset(Dataset):
-    def __init__(self, dataset_path, data_folder, facepos_folder, id_txt, R=6, transform=None):
+    def __init__(self, dataset_path, data_folder, bounding_box_folder, facepos_folder, id_txt, R=6, transform=None):
         self.dataset_path = dataset_path
         self.data_folder = data_folder
+        self.bounding_box_folder = bounding_box_folder
         self.facepos_folder = facepos_folder
         self.id_txt = id_txt
         self.R = R
@@ -29,6 +30,7 @@ class NoWDataset(Dataset):
 
         all_img_dirs = [ 
             [ os.path.join(subject_path, sub_img_dir) for sub_img_dir in os.listdir(subject_path) ] 
+            # [ os.path.join(subject_path, sub_img_dir) for sub_img_dir in ['multiview_expressions'] ] 
             for subject_path in subject_paths 
         ]
         all_imgs = [
@@ -47,10 +49,12 @@ class NoWDataset(Dataset):
         # selected_img_paths = [ [ [imgs from the cur person], [img from another person] ] ]
         # selected_img = [ [ imgs from the cur person], [img from another person ] ]
         cur_i = idx
+        next_i = cur_i
+        # print(self.subject_paths)
         selected_imgs_paths = []
         random_sample_range = (0, len(self.subject_paths)-1)
-        for cur_i in range(len(self.subject_paths)):
-            next_i = cur_i
+        # for cur_i in range(len(self.subject_paths)):
+        #     next_i = cur_i
         while len(self.subject_paths) > 1 and next_i == cur_i:
             next_i = random.randint(random_sample_range[0], random_sample_range[1])
         # TODO: should not truncate if R is larger - should add empty images here
@@ -66,8 +70,27 @@ class NoWDataset(Dataset):
         #     [ io.imread(same_img_path) for same_img_path in same_img_paths ],
         #     [ io.imread(dif_img_path) ]
         # ]
+    
+        # all_paths= same_img_paths
+        # all_paths.append(dif_img_path)
+
+        # all_img_contents = []
+        # for i in range(len(all_paths)):
+        #     img_path = all_paths[i]
+        #     bbox_path = img_path.replace(self.data_folder, self.bounding_box_folder).replace('jpg', 'npy')
+        #     openpose_path = img_path.replace(self.data_folder, self.facepos_folder).replace('jpg', 'npy')
+        #     
+        #     cur_img = io.imread(img_path)
+        #     cur_bbox = np.load(bbox_path, allow_pickle=True, encoding='latin1').item()
+        #     cur_openpose = np.load(openpose_path,  allow_pickle=True, encoding='latin1')
+
+        #     cur_img = cur_img[cur_bbox['top']:cur_bbox['bottom'], cur_bbox['left']:cur_bbox['right'], :]
+        #     all_img_contents.append({ 'image': cur_img, 'openpose': cur_openpose })
+
+        # print(same_img_paths, len(same_img_paths))
         all_img_contents = [ {"image": io.imread(same_img_path), "openpose": np.load(same_img_path.replace(self.data_folder, self.facepos_folder).replace("jpg", "npy"), allow_pickle=True, encoding='latin1')} for same_img_path in same_img_paths]
         all_img_contents.append({"image": io.imread(dif_img_path),"openpose": np.load(dif_img_path.replace(self.data_folder, self.facepos_folder).replace("jpg", "npy"), allow_pickle=True, encoding='latin1')})
+
         sample = { 'images': all_img_contents }
         
         if self.transform:
@@ -146,13 +169,16 @@ if __name__ == '__main__':
     composed_transforms = transforms.Compose([ ScaleAndCrop(config_img_size), ToTensor() ])
     dataset = NoWDataset(
         dataset_path = os.path.join('.', 'training_set', 'NoW_Dataset', 'final_release_version'), 
+        bounding_box_folder = 'detected_face',
         data_folder = 'iphone_pictures',
+        facepos_folder = 'openpose',
         id_txt = 'subjects_id.txt',
         R = 6,
         transform = composed_transforms
     )
 
-    for i in range(len(dataset)):
-        print(dataset[i]['images'].shape)
+    # for i in range(len(dataset)):
+        # print(dataset[i]['images'].shape)
+    i = 0
     plt.imshow(dataset[i]['images'][0].permute(1,2,0).numpy())
     plt.show()
