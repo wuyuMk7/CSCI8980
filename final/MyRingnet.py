@@ -45,9 +45,9 @@ fc1_out_size = 512
 fc2_out_size = 512
 fc3_out_size = 159
 
-train_batch_size = 1
-learning_rate = 1e-4
-epochs = 6
+train_batch_size = 10
+learning_rate = 1 * 1e-4
+epochs = 10
 decay = 0.1
 shape_loss_eta = 0.5
 sc_loss_lambda = 1.0
@@ -103,16 +103,17 @@ class Identity(nn.Module):
 # Input size: 2048 + 159, fc1_size: 512, fc2_size: 512, out_size: 159
 class Regression(nn.Module):
   def __init__(
+    # self, input_size = 2048, fc1_size = 512, 
     self, input_size = 2048+159, fc1_size = 512, 
     fc2_size = 512, out_size = 159, iter = 8):
     super().__init__()
     self.fc1 = nn.Linear(input_size, fc1_size, bias=True)
     self.relu1 = nn.ReLU()
-    self.dropout1 = nn.Dropout(p=0.2)
+    # self.dropout1 = nn.Dropout(p=0.2)
 
     self.fc2 = nn.Linear(fc1_size, fc2_size, bias = True)
     self.relu2 = nn.ReLU()
-    self.dropout2 = nn.Dropout(p=0.2)
+    # self.dropout2 = nn.Dropout(p=0.2)
 
     self.fc3 = nn.Linear(fc2_size, out_size, bias=True)
     # init.normal_(self.fc1, 0, 1)
@@ -120,10 +121,10 @@ class Regression(nn.Module):
     # init.normal_(self.fc3, 0, 1)
   
   def forward(self, x):
-    x = self.dropout1(self.relu1(self.fc1(x)))
-    x = self.dropout2(self.relu2(self.fc2(x)))
-    # x = self.relu1(self.fc1(x))
-    # x = self.relu2(self.fc2(x))
+    # x = self.dropout1(self.relu1(self.fc1(x)))
+    # x = self.dropout2(self.relu2(self.fc2(x)))
+    x = self.relu1(self.fc1(x))
+    x = self.relu2(self.fc2(x))
     x = self.fc3(x)
     return x
 
@@ -171,10 +172,12 @@ def preprocess_image(img_path):
 
 def train(
   dataloader, resnet50, regression, flamelayer, 
-  optimizer_reg, optimizer_res, device=None):
+  optimizer_reg, optimizer_res, data_batches, device=None):
 
-  NoWDataLoader = dataloader
-  for batch_idx, data_batched in enumerate(NoWDataLoader):
+  batch_idx = 0
+  for batch_idx in range(0, len(data_batches)):
+    data_batched = data_batches[batch_idx]
+  # for batch_idx, data_batched in enumerate(NoWDataLoader):
     # print(batch_idx, data_batched['images'].shape)
     cur_batch, cur_batch_shape = data_batched['images'], data_batched['images'].shape
     cur_facepos = data_batched['faceposes']
@@ -209,24 +212,22 @@ def train(
         regress_estimates = regression(regress_input)
       regress_output = regress_estimates
       regress_outputs.append(regress_output)
+      # regress_estimates = regression(res_output)
+      # regress_output = regress_estimates
+      # regress_outputs.append(regress_output)
 
       # FLAME model
       cam_params, pose_params = regress_output[0:, 0:3], regress_output[0:, 3:9]
       shape_params, exp_params = regress_output[0:, 9:109], regress_output[0:, 109:159]
       # print(cam_params.shape, pose_params.shape, shape_params.shape, exp_params.shape)
       flame_vert, flame_lmk = flamelayer(shape_params, exp_params, pose_params)
+      # hacked the y position of the output landmarks
       flame_lmk[:, :, 1] *= -1
       flame_vertices.append(flame_vert)
-      # flame_lmks.append(flame_lmk)
-      # flame_cams.append(cam_params)
-      # print("raw flame landmarks")
-      # print(flame_lmk)
-      # print("cam ")
-      # print(cam_params)
       
       undo_scales_batch = 1. / scales_batch
-      cam_params = transform_cam(cam_params, undo_scales_batch, config_img_size, centers_batch)
-      flame_proj_lmk = project_points(flame_lmk, cam_params)
+      cam_params_transformed = transform_cam(cam_params, undo_scales_batch, config_img_size, centers_batch)
+      flame_proj_lmk = project_points(flame_lmk, cam_params_transformed)
       flame_proj_lmks.append(flame_proj_lmk)
       # print(shape_params)
       shape_norms += torch.square(torch.norm(shape_params))
@@ -244,8 +245,8 @@ def train(
           continue
         # cur_same_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[next_i])
         # cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i], regress_outputs[diff_idx])
-        cur_same_loss_s = F.mse_loss(regress_outputs[cur_i][3:], regress_outputs[next_i][3:])
-        cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i][3:], regress_outputs[diff_idx][3:])
+        cur_same_loss_s = F.mse_loss(regress_outputs[cur_i][3:], regress_outputs[next_i][3:], reduction="sum")
+        cur_dif_loss_s = F.mse_loss(regress_outputs[cur_i][3:], regress_outputs[diff_idx][3:], reduction="sum")
         loss_s += max(0, cur_same_loss_s - cur_dif_loss_s + shape_loss_eta)
     # TODO: Change the scaler!!!! It's wrong!!! - Can add average=False to loss !!!
     loss_sc = loss_s / (len(reshaped_batch) * ring_size)
@@ -260,6 +261,7 @@ def train(
       flame_proj_lmk, reshaped_facepos, img_shapes = flame_proj_lmks[img_idx].cuda(), reshaped_faceposes[img_idx].cuda(), reshaped_img_shapes[img_idx].cuda()
       # flame_proj_lmk, reshaped_facepos, img_shapes = flame_proj_lmks[img_idx], reshaped_faceposes[img_idx], reshaped_img_shapes[img_idx]
       ground_truth_weights = ((reshaped_facepos[:,:,:,2] > 0.41).float()).reshape(-1, 68)
+      # ground_truth_weights = reshaped_facepos[:,:,:,2].reshape(-1, 68)
       # print(ground_truth_weights)
       ground_truth_lmk = (reshaped_facepos[:,:,:,:2]).reshape(-1, 68, 2)
       #print(ground_truth_weights)
@@ -277,12 +279,13 @@ def train(
       loss_p = F.l1_loss(
         # size_average=False,
         input = input,
-        target = ground_truth
+        target = ground_truth,
+        reduction="sum"
       )
       # print(scale_cpu)
       # print(config_img_size)
       # print(loss_p)
-      loss_proj += loss_p / (config_img_size)
+      loss_proj += loss_p #/ (config_img_size)
       # print(loss_proj)
     loss_proj = loss_proj / (len(reshaped_batch))
 
@@ -293,7 +296,7 @@ def train(
     shape_part = feat_loss_shape_lambda * shape_norms
     exp_part = feat_loss_expression_lambda * exp_norms
     # loss_tot = sc_part + proj_part + shape_part + exp_part
-    loss_tot = proj_part
+    loss_tot = proj_part + sc_part
     print("sc: " + str(sc_part) + " proj: " + str(proj_part) + " shape: " + str(shape_part) + " exp: " + str(exp_part))
     print(batch_idx, loss_tot)
     optimizer_reg.zero_grad()
@@ -391,7 +394,7 @@ if __name__ == '__main__':
     dataset_path = os.path.join('.', 'training_set', 'NoW_Dataset', 'final_release_version'), 
     data_folder = 'iphone_pictures',
     facepos_folder= 'openpose',
-    id_txt = 'subjects_idst.txt',
+    id_txt = 'subjects_id.txt',
     R = 6,
     transform = composed_transforms
   )
@@ -400,6 +403,7 @@ if __name__ == '__main__':
     resnet50 = torch.load("./resnet50.pkl")
   else:
     resnet50 = models.resnet50(pretrained=True)
+  # resnet50.requires_grad_ = False
   resnet50.cuda()
   resnet50.fc = Identity()
   if need_evaluate:
@@ -432,9 +436,14 @@ if __name__ == '__main__':
   if need_evaluate:
     evaluate(resnet50, regression, flamelayer, NoWDataLoader)
   else:
+    # prepare for data
+    data_batches = []
+    for batch_idx, data_batched in enumerate(NoWDataLoader):
+      data_batches.append(data_batched)
+
     for epoch_idx in range(epochs):
       print("Epoch: {}".format(epoch_idx))
-      train(NoWDataLoader, resnet50, regression, flamelayer, optimizer_reg, optimizer_res)
+      train(NoWDataLoader, resnet50, regression, flamelayer, optimizer_reg, optimizer_res, data_batches)
     torch.save(regression, "./model.pkl")
     torch.save(resnet50, "./resnet50.pkl")
     # print(cur_batch_shape, reshaped_batch[0].shape)

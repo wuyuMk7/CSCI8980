@@ -37,8 +37,10 @@ class NoWDataset(Dataset):
         ]   
 
         self.subject_paths = subject_paths
+        # print(subject_paths)
         self.all_img_dirs = all_img_dirs
         self.all_imgs = all_imgs
+        # print(all_imgs)
 
     def __len__(self):
         return len(self.all_imgs)
@@ -47,12 +49,21 @@ class NoWDataset(Dataset):
         # selected_img_paths = [ [ [imgs from the cur person], [img from another person] ] ]
         # selected_img = [ [ imgs from the cur person], [img from another person ] ]
         cur_i = idx
-        selected_imgs_paths = []
-        random_sample_range = (0, len(self.subject_paths)-1)
-        for cur_i in range(len(self.subject_paths)):
-            next_i = cur_i
-        while len(self.subject_paths) > 1 and next_i == cur_i:
-            next_i = random.randint(random_sample_range[0], random_sample_range[1])
+        '''
+        Tongyu hacked here
+        '''
+        # selected_imgs_paths = []
+        # random_sample_range = (0, len(self.subject_paths)-1)
+        # for cur_i in range(len(self.subject_paths)):
+        #     next_i = cur_i
+        # while len(self.subject_paths) > 1 and next_i == cur_i:
+        #     next_i = random.randint(random_sample_range[0], random_sample_range[1])
+        next_i = cur_i + 1
+        if next_i >= len(self.subject_paths):
+            next_i = 0
+
+        # print(cur_i)
+        # print(next_i)
         # TODO: should not truncate if R is larger - should add empty images here
         # Now assume R is always valid
         # cur_R = self.R if len(self.all_imgs[cur_i]) > self.R else len(self.all_imgs[cur_i])
@@ -66,6 +77,8 @@ class NoWDataset(Dataset):
         #     [ io.imread(same_img_path) for same_img_path in same_img_paths ],
         #     [ io.imread(dif_img_path) ]
         # ]
+        # print(same_img_paths)
+        # print(dif_img_path)
         all_img_contents = [ {"image": io.imread(same_img_path), "openpose": np.load(same_img_path.replace(self.data_folder, self.facepos_folder).replace("jpg", "npy"), allow_pickle=True, encoding='latin1')} for same_img_path in same_img_paths]
         all_img_contents.append({"image": io.imread(dif_img_path),"openpose": np.load(dif_img_path.replace(self.data_folder, self.facepos_folder).replace("jpg", "npy"), allow_pickle=True, encoding='latin1')})
         sample = { 'images': all_img_contents }

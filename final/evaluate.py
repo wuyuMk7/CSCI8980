@@ -37,16 +37,17 @@ class Identity(nn.Module):
 # Input size: 2048 + 159, fc1_size: 512, fc2_size: 512, out_size: 159
 class Regression(nn.Module):
   def __init__(
+    # self, input_size = 2048, fc1_size = 512, 
     self, input_size = 2048+159, fc1_size = 512, 
     fc2_size = 512, out_size = 159, iter = 8):
     super().__init__()
     self.fc1 = nn.Linear(input_size, fc1_size, bias=True)
     self.relu1 = nn.ReLU()
-    self.dropout1 = nn.Dropout(p=0.2)
+    # self.dropout1 = nn.Dropout(p=0.2)
 
     self.fc2 = nn.Linear(fc1_size, fc2_size, bias = True)
     self.relu2 = nn.ReLU()
-    self.dropout2 = nn.Dropout(p=0.2)
+    # self.dropout2 = nn.Dropout(p=0.2)
 
     self.fc3 = nn.Linear(fc2_size, out_size, bias=True)
     # init.normal_(self.fc1, 0, 1)
@@ -54,10 +55,10 @@ class Regression(nn.Module):
     # init.normal_(self.fc3, 0, 1)
   
   def forward(self, x):
-    x = self.dropout1(self.relu1(self.fc1(x)))
-    x = self.dropout2(self.relu2(self.fc2(x)))
-    # x = self.relu1(self.fc1(x))
-    # x = self.relu2(self.fc2(x))
+    # x = self.dropout1(self.relu1(self.fc1(x)))
+    # x = self.dropout2(self.relu2(self.fc2(x)))
+    x = self.relu1(self.fc1(x))
+    x = self.relu2(self.fc2(x))
     x = self.fc3(x)
     return x
 
@@ -78,7 +79,7 @@ config_img_size = 244
 
 if __name__ == '__main__':
     # read images and scale
-    input_img_path = "./training_set/NoW_Dataset/final_release_version/iphone_pictures/FaMoS_180424_03335_TA/multiview_neutral/IMG_0101.jpg"
+    input_img_path = "./training_set/NoW_Dataset/final_release_version/iphone_pictures/FaMoS_180426_03336_TA/multiview_neutral/IMG_0153.jpg"
     openpose = np.load(input_img_path.replace("iphone_pictures", "openpose").replace("jpg", "npy"), allow_pickle=True, encoding='latin1')
     img = io.imread(input_img_path)
     if np.max(img.shape[:2]) != config_img_size:
@@ -111,6 +112,7 @@ if __name__ == '__main__':
 
     # run the model
     res_output = resnet50(crop)
+
     # Empty estimates as the initial value for concatenation
     regress_estimates = torch.zeros([ res_output.shape[0], MyRingnet.regress_out_size ]).cuda()
     # Regression model
@@ -119,6 +121,10 @@ if __name__ == '__main__':
       regress_input = torch.cat([res_output, regress_estimates], 1)
       regress_estimates = regression(regress_input)
     regress_output = regress_estimates
+    # regress_estimates = regression(res_output)
+    # regress_output = regress_estimates
+
+
     # FLAME model
     cam_params, pose_params = regress_output[0:, 0:3], regress_output[0:, 3:9]
     shape_params, exp_params = regress_output[0:, 9:109], regress_output[0:, 109:159]
@@ -128,7 +134,10 @@ if __name__ == '__main__':
 
     # cam_params[:, 0] = 2
     # cam_params[:, 1] = 0.2
+    print("cam")
     print(cam_params)
+    print("pose")
+    print(pose_params)
     center = torch.tensor(center.copy()).cuda()
     new_cam = MyRingnet.transform_cam(cam_params, 1. / scale, config_img_size, center[None, :])
     projected_lmks = MyRingnet.project_points(flame_lmk, new_cam)
